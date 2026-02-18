@@ -18,15 +18,22 @@ A Swiss Army knife CLI for website **uptime monitoring** and **change detection*
 
 ## Features
 
+- **Interactive TUI** — Full terminal UI dashboard with keyboard navigation (Bubbletea-powered)
 - **Uptime Monitoring** — HTTP(s) status codes, response times, availability percentage
 - **Change Detection** — Content diffing, CSS selector targeting, hash-based change tracking
 - **Multiple Check Types** — HTTP, TCP, Ping, DNS
 - **SSL Certificate Monitoring** — Days until expiry warnings
-- **Live Dashboard** — `watchdog watch` for real-time terminal monitoring
+- **Keyword Validation** — Verify response body contains expected text
+- **Retry Logic** — Configurable retries before marking targets as down
+- **Quick Checks** — `watchdog ping` for one-off diagnostics without saving
+- **Live Dashboard** — `watchdog watch` for auto-refreshing terminal view
+- **Interactive TUI** — `watchdog tui` for full keyboard-driven management (works over SSH)
+- **Bulk Import** — Import targets from YAML files
+- **Sparkline Charts** — Response time trend visualization
 - **Notifications** — Webhook, Slack, Telegram, Discord, shell commands
 - **Daemon Mode** — Background service with scheduled checks
 - **AI-Friendly** — `--json` flag on all commands for structured, parseable output
-- **Zero Dependencies** — Single binary, no Docker, no runtime requirements
+- **Zero Dependencies** — Single 17MB binary, no Docker, no runtime requirements
 - **Cross-Platform** — macOS (Intel + Apple Silicon) and Linux (x86_64 + ARM64)
 - **SQLite Storage** — Persistent history at `~/.watchdog/watchdog.db`
 - **Shell Completions** — Bash, Zsh, Fish, PowerShell
@@ -113,6 +120,19 @@ watchdog status --period 7d          # Last 7 days
 watchdog status --json               # JSON output
 ```
 
+### Interactive TUI
+
+```bash
+watchdog tui                         # Launch full interactive dashboard
+```
+
+The TUI provides a complete management interface:
+- Navigate targets with arrow keys / j/k
+- Press `Enter` to view detailed stats and history
+- Press `c` to check selected target, `C` to check all
+- Press `p` to pause/resume, `d` to delete
+- Works great over SSH — manage your monitors remotely
+
 ### Live dashboard
 
 ```bash
@@ -198,7 +218,10 @@ watchdog completion bash             # Shell completions
 | `list` | List all monitored targets |
 | `check [target]` | Run checks (all or specific) |
 | `status [target]` | Show uptime stats and summary |
-| `watch` | Live-updating terminal dashboard |
+| `tui` | Interactive terminal dashboard (keyboard-driven) |
+| `watch` | Live-updating terminal dashboard (auto-refresh) |
+| `ping <url>` | Quick one-off check (no DB save) |
+| `import <file>` | Bulk import targets from YAML |
 | `diff <target>` | Show content changes between snapshots |
 | `history <target>` | Show check history |
 | `pause <target>` | Pause monitoring |
@@ -336,6 +359,7 @@ make cross
 - **Database:** SQLite via [modernc.org/sqlite](https://modernc.org/sqlite) (pure Go, zero CGO)
 - **HTML Parsing:** [goquery](https://github.com/PuerkitoBio/goquery)
 - **Config:** [gopkg.in/yaml.v3](https://gopkg.in/yaml.v3)
+- **TUI:** [Bubbletea](https://github.com/charmbracelet/bubbletea) + [Bubbles](https://github.com/charmbracelet/bubbles) + [Lipgloss](https://github.com/charmbracelet/lipgloss)
 - **Diffing:** Custom LCS-based line diff engine
 
 ## License
