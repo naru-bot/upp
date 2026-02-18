@@ -4,18 +4,33 @@ A Swiss Army knife CLI for website **uptime monitoring** and **change detection*
 
 **Designed for both humans and AI agents.** Every command supports `--json` for structured output.
 
+## Why Watchdog?
+
+| | Uptime Kuma | changedetection.io | **Watchdog** |
+|---|---|---|---|
+| Install | Docker + Web UI | Docker + Web UI | **Single binary** |
+| Dependencies | Node.js, SQLite | Python, Playwright | **None** |
+| Interface | Web browser | Web browser | **Terminal / JSON** |
+| AI-friendly | ❌ API only | ❌ API only | **✅ Native CLI + JSON** |
+| Uptime monitoring | ✅ | ❌ | **✅** |
+| Change detection | ❌ | ✅ | **✅** |
+| Combined | Need both | Need both | **All-in-one** |
+
 ## Features
 
 - **Uptime Monitoring** — HTTP(s) status codes, response times, availability percentage
 - **Change Detection** — Content diffing, CSS selector targeting, hash-based change tracking
 - **Multiple Check Types** — HTTP, TCP, Ping, DNS
-- **SSL Certificate Monitoring** — Days until expiry
+- **SSL Certificate Monitoring** — Days until expiry warnings
+- **Live Dashboard** — `watchdog watch` for real-time terminal monitoring
 - **Notifications** — Webhook, Slack, Telegram, Discord, shell commands
 - **Daemon Mode** — Background service with scheduled checks
 - **AI-Friendly** — `--json` flag on all commands for structured, parseable output
 - **Zero Dependencies** — Single binary, no Docker, no runtime requirements
 - **Cross-Platform** — macOS (Intel + Apple Silicon) and Linux (x86_64 + ARM64)
 - **SQLite Storage** — Persistent history at `~/.watchdog/watchdog.db`
+- **Shell Completions** — Bash, Zsh, Fish, PowerShell
+- **Config File** — `~/.config/watchdog/config.yml` for persistent defaults
 
 ## Quick Start
 
@@ -39,26 +54,41 @@ tar xzf watchdog_linux_amd64.tar.gz
 sudo mv watchdog /usr/local/bin/
 ```
 
-### Add a target
+**Build from source:**
+```bash
+git clone https://github.com/naru-bot/watchdog.git
+cd watchdog
+make build
+# Binary is at ./watchdog
+```
+
+### Initialize (optional)
+
+```bash
+watchdog init
+# Creates ~/.config/watchdog/config.yml with default settings
+```
+
+### Add targets
 
 ```bash
 # Basic HTTP monitoring
 watchdog add https://example.com --name "My Site"
 
-# Monitor a specific element (change detection)
+# Monitor a specific CSS element for changes
 watchdog add https://example.com/pricing --name "Pricing" --selector "div.price"
 
 # TCP port check
 watchdog add 192.168.1.1:3306 --type tcp --name "MySQL"
 
-# DNS check
+# DNS resolution check
 watchdog add example.com --type dns --name "DNS Check"
 
 # Ping check
 watchdog add 8.8.8.8 --type ping --name "Google DNS"
 
 # Custom interval (every 60 seconds)
-watchdog add https://api.example.com/health --name "API Health" --interval 60
+watchdog add https://api.example.com/health --name "API" --interval 60
 ```
 
 ### Run checks
@@ -69,36 +99,46 @@ watchdog check
 
 # Check specific target
 watchdog check "My Site"
+
+# JSON output (for AI agents / scripts)
+watchdog check --json
 ```
 
 ### View status
 
 ```bash
-# Summary of all targets
-watchdog status
-
-# Specific target with 7-day stats
-watchdog status "My Site" --period 7d
-
-# JSON output
-watchdog status --json
+watchdog status                      # All targets, last 24h
+watchdog status "My Site"            # Specific target
+watchdog status --period 7d          # Last 7 days
+watchdog status --json               # JSON output
 ```
 
-### View changes
+### Live dashboard
 
 ```bash
-# See what changed (unified diff)
-watchdog diff "My Site"
+watchdog watch                       # Auto-refresh every 30s
+watchdog watch --refresh 10          # Refresh every 10s
+```
 
-# JSON diff output
-watchdog diff "My Site" --json
+### View content changes
+
+```bash
+watchdog diff "My Site"              # Unified diff (colored)
+watchdog diff "My Site" --json       # Structured diff
 ```
 
 ### Check history
 
 ```bash
-watchdog history "My Site"
-watchdog history "My Site" --limit 50
+watchdog history "My Site"           # Last 20 checks
+watchdog history "My Site" -l 100    # Last 100 checks
+```
+
+### Pause / Resume
+
+```bash
+watchdog pause "My Site"             # Pause monitoring
+watchdog unpause "My Site"           # Resume monitoring
 ```
 
 ### Notifications
@@ -109,68 +149,64 @@ watchdog notify add --name alerts --type webhook \
   --config '{"url":"https://hooks.slack.com/services/..."}'
 
 # Telegram
-watchdog notify add --name telegram --type telegram \
+watchdog notify add --name tg --type telegram \
   --config '{"bot_token":"123:ABC","chat_id":"-100123"}'
 
 # Discord
 watchdog notify add --name discord --type discord \
   --config '{"webhook_url":"https://discord.com/api/webhooks/..."}'
 
-# Shell command
+# Shell command (variables: {target}, {url}, {status}, {message})
 watchdog notify add --name logger --type command \
   --config '{"command":"echo \"{target} is {status}\" >> /var/log/watchdog.log"}'
 
-# List configured notifications
+# List / Remove
 watchdog notify list
-
-# Remove
 watchdog notify remove alerts
 ```
 
 ### Daemon mode
 
 ```bash
-# Run in foreground
-watchdog daemon
-
-# Run in background
-nohup watchdog daemon > /var/log/watchdog.log 2>&1 &
-
-# Or with systemd (see below)
+watchdog daemon                      # Foreground
+nohup watchdog daemon &              # Background
 ```
 
 ### Export data
 
 ```bash
-# JSON export
 watchdog export --json > backup.json
-
-# CSV export
 watchdog export --format csv > data.csv
 ```
 
 ### Other commands
 
 ```bash
-watchdog list          # List all targets
-watchdog remove "My Site"  # Remove a target
-watchdog version       # Show version
+watchdog list                        # List all targets (alias: ls)
+watchdog remove "My Site"            # Remove target
+watchdog version                     # Version info
+watchdog completion bash             # Shell completions
 ```
 
 ## All Commands
 
 | Command | Description |
 |---------|-------------|
+| `init` | Initialize configuration file |
 | `add <url>` | Add a URL to monitor |
-| `remove <name\|url\|id>` | Remove a monitored target |
+| `remove <target>` | Remove a monitored target |
 | `list` | List all monitored targets |
 | `check [target]` | Run checks (all or specific) |
 | `status [target]` | Show uptime stats and summary |
+| `watch` | Live-updating terminal dashboard |
 | `diff <target>` | Show content changes between snapshots |
 | `history <target>` | Show check history |
+| `pause <target>` | Pause monitoring |
+| `unpause <target>` | Resume monitoring |
 | `notify add\|list\|remove` | Manage notification channels |
 | `export` | Export data as JSON or CSV |
 | `daemon` | Run as background service |
+| `completion` | Generate shell completion scripts |
 | `version` | Print version |
 
 ## Global Flags
@@ -178,62 +214,86 @@ watchdog version       # Show version
 | Flag | Description |
 |------|-------------|
 | `--json` | Output in JSON format (all commands) |
+| `--no-color` | Disable colored output |
+| `-v, --verbose` | Verbose output |
+| `-q, --quiet` | Suppress non-essential output |
+
+## Configuration
+
+Run `watchdog init` to generate `~/.config/watchdog/config.yml`:
+
+```yaml
+defaults:
+  interval: 300        # Default check interval (seconds)
+  type: http           # Default check type
+  timeout: 30          # HTTP timeout (seconds)
+  retry_count: 1       # Retries before marking as down
+  user_agent: watchdog/1.0
+
+display:
+  color: true          # Colored terminal output
+  format: table        # Default output format
+  verbose: false
+```
 
 ## AI Agent Usage
 
-Watchdog is designed to be used by AI agents and automation scripts. The `--json` flag produces structured output on every command.
+Watchdog is designed to be used by AI agents and automation scripts. The `--json` flag produces consistent, structured output on every command.
 
-### Example: AI agent monitoring workflow
-
-```bash
-# Add targets
-watchdog add https://myapp.com --name myapp --json
-# {"id":1,"name":"myapp","url":"https://myapp.com","type":"http",...}
-
-# Run checks and parse results
-watchdog check --json
-# [{"target":"myapp","url":"https://myapp.com","status":"up","response_time_ms":142,"changed":false}]
-
-# Get status
-watchdog status --json
-# [{"target":"myapp","uptime_percent":99.8,"avg_response_ms":145,"total_checks":288}]
-
-# Check for content changes
-watchdog diff myapp --json
-# {"has_changes":true,"summary":"+3 lines, -1 lines","changes":[...]}
-
-# Export everything
-watchdog export --json
-```
-
-### Integration with AI tools
+### Quick integration
 
 ```bash
-# Use in a shell pipeline
+# Add + check in one go
+watchdog add https://api.example.com --name api --json
+watchdog check api --json
+
+# Parse with jq
 watchdog check --json | jq '.[] | select(.status == "down")'
+watchdog status --json | jq '.[] | select(.uptime_percent < 99)'
 
-# Cron job: check every 5 minutes
-*/5 * * * * /usr/local/bin/watchdog check >/dev/null 2>&1
-
-# One-liner: add + check + report
-watchdog add https://api.example.com --name api --json && watchdog check api --json
+# Get changed targets
+watchdog check --json | jq '.[] | select(.changed == true)'
 ```
 
-### Machine-readable output format
+### JSON output format
 
 All `--json` output follows consistent patterns:
-- **Lists** return JSON arrays: `[{...}, {...}]`
-- **Single items** return JSON objects: `{...}`
-- **Errors** return: `{"error": "message"}`
-- **All timestamps** are RFC3339/ISO8601 format
+- **Lists** → JSON arrays: `[{...}, {...}]`
+- **Single items** → JSON objects: `{...}`
+- **Errors** → `{"error": "message"}`
+- **Timestamps** → RFC3339 format
+
+### Example: check output
+
+```json
+[
+  {
+    "target": "My Site",
+    "url": "https://example.com",
+    "status": "up",
+    "status_code": 200,
+    "response_time_ms": 142,
+    "content_hash": "a1b2c3...",
+    "changed": false,
+    "ssl_days_left": 85
+  }
+]
+```
+
+### Cron integration
+
+```bash
+# Check every 5 minutes, alert on failures
+*/5 * * * * watchdog check --json | jq -e '.[] | select(.status == "down")' && echo "ALERT" | mail -s "Site down" admin@example.com
+```
 
 ## Systemd Service
 
-Create `/etc/systemd/system/watchdog.service`:
+Create `/etc/systemd/system/watchdog-monitor.service`:
 
 ```ini
 [Unit]
-Description=Watchdog - Website Monitor
+Description=Watchdog Website Monitor
 After=network.target
 
 [Service]
@@ -247,36 +307,37 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo systemctl enable watchdog
-sudo systemctl start watchdog
+sudo systemctl enable watchdog-monitor
+sudo systemctl start watchdog-monitor
 ```
 
 ## Data Storage
 
 All data is stored in `~/.watchdog/watchdog.db` (SQLite). You can:
-- Back it up by copying the file
-- Query it directly with any SQLite client
+- Back up by copying the file
+- Query directly with any SQLite client
 - Export via `watchdog export`
 
-## Building from Source
+## Cross-Compilation
 
 ```bash
-git clone https://github.com/naru-bot/watchdog.git
-cd watchdog
-make build
-
-# Cross-compile for all platforms
 make cross
+# Produces:
+#   watchdog-darwin-arm64   (macOS Apple Silicon)
+#   watchdog-darwin-amd64   (macOS Intel)
+#   watchdog-linux-amd64    (Linux x86_64)
+#   watchdog-linux-arm64    (Linux ARM64)
 ```
 
 ## Tech Stack
 
-- **Language:** Go
+- **Language:** [Go](https://go.dev)
 - **CLI Framework:** [Cobra](https://github.com/spf13/cobra)
-- **Database:** SQLite via [modernc.org/sqlite](https://modernc.org/sqlite) (pure Go, no CGO)
+- **Database:** SQLite via [modernc.org/sqlite](https://modernc.org/sqlite) (pure Go, zero CGO)
 - **HTML Parsing:** [goquery](https://github.com/PuerkitoBio/goquery)
-- **Diffing:** Custom LCS-based line diff
+- **Config:** [gopkg.in/yaml.v3](https://gopkg.in/yaml.v3)
+- **Diffing:** Custom LCS-based line diff engine
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)

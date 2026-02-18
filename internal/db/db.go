@@ -281,6 +281,22 @@ func ListNotifyConfigs() ([]NotifyConfig, error) {
 	return configs, nil
 }
 
+func SetPaused(identifier string, paused bool) error {
+	val := 0
+	if paused {
+		val = 1
+	}
+	res, err := db.Exec("UPDATE targets SET paused = ? WHERE name = ? OR url = ? OR id = ?", val, identifier, identifier, identifier)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("target not found: %s", identifier)
+	}
+	return nil
+}
+
 func RemoveNotifyConfig(identifier string) error {
 	res, err := db.Exec("DELETE FROM notify_configs WHERE name = ? OR id = ?", identifier, identifier)
 	if err != nil {
