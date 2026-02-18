@@ -1,0 +1,4 @@
+watchdog
+watchdog-*
+*.db
+dist/
