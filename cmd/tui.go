@@ -237,8 +237,15 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(msg, keys.Help):
 			m.showHelp = !m.showHelp
+			return m, nil
 		case key.Matches(msg, keys.Enter):
-			return m, m.showDetail()
+			row := m.table.Cursor()
+			if row >= 0 && row < len(m.targets) {
+				m.selected = &m.targets[row]
+				m.view = viewDetail
+				m.updateDetail()
+			}
+			return m, nil
 		case key.Matches(msg, keys.Check):
 			return m, m.checkSelected()
 		case key.Matches(msg, keys.CheckAll):
@@ -345,18 +352,6 @@ func (m *tuiModel) refreshData() {
 		})
 	}
 	m.table.SetRows(rows)
-}
-
-func (m *tuiModel) showDetail() tea.Cmd {
-	return func() tea.Msg {
-		row := m.table.Cursor()
-		if row >= 0 && row < len(m.targets) {
-			m.selected = &m.targets[row]
-			m.view = viewDetail
-			m.updateDetail()
-		}
-		return nil
-	}
 }
 
 func (m *tuiModel) updateDetail() {
