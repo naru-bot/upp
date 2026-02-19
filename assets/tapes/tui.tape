@@ -2,7 +2,7 @@
 # Pre-requisite: targets should already exist in DB before recording
 Output assets/tui.gif
 
-Set FontSize 20
+Set FontSize 18
 Set Width 1000
 Set Height 600
 Set LineHeight 1.3

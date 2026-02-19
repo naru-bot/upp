@@ -1,7 +1,7 @@
 # Uptime Monitoring with Sparklines
 Output assets/uptime.gif
 
-Set FontSize 22
+Set FontSize 18
 Set Width 900
 Set Height 500
 Set LineHeight 1.4

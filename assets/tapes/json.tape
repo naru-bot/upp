@@ -1,7 +1,7 @@
 # JSON Output for AI Agents
 Output assets/json.gif
 
-Set FontSize 20
+Set FontSize 18
 Set Width 950
 Set Height 550
 Set LineHeight 1.3

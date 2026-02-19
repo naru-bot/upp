@@ -1,7 +1,7 @@
 # Hero Demo: add → check → status
 Output assets/demo.gif
 
-Set FontSize 22
+Set FontSize 18
 Set Width 900
 Set Height 500
 Set LineHeight 1.4

@@ -1,7 +1,7 @@
 # Change Detection + Diff
 Output assets/change-detection.gif
 
-Set FontSize 22
+Set FontSize 18
 Set Width 900
 Set Height 500
 Set LineHeight 1.4

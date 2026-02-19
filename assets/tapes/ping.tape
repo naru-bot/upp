@@ -1,7 +1,7 @@
 # Quick Ping Diagnostics
 Output assets/ping.gif
 
-Set FontSize 22
+Set FontSize 18
 Set Width 900
 Set Height 450
 Set LineHeight 1.4

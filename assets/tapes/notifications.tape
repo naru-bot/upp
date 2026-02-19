@@ -1,7 +1,7 @@
 # Notifications Setup
 Output assets/notifications.gif
 
-Set FontSize 20
+Set FontSize 18
 Set Width 950
 Set Height 500
 Set LineHeight 1.3
