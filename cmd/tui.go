@@ -375,6 +375,13 @@ func (m *tuiModel) updateDetail() {
 	sb.WriteString(fmt.Sprintf("Paused:   %v\n", t.Paused))
 	sb.WriteString("\n")
 
+	// Last error
+	lastResults, _ := db.GetCheckHistory(t.ID, 1)
+	if len(lastResults) > 0 && lastResults[0].Error != "" {
+		sb.WriteString(fmt.Sprintf("⚠ Error:  %s\n", lastResults[0].Error))
+	}
+	sb.WriteString("\n")
+
 	// Stats
 	since := time.Now().Add(-24 * time.Hour)
 	total, up, avgMs, _ := db.GetUptimeStats(t.ID, since)
@@ -398,8 +405,11 @@ func (m *tuiModel) updateDetail() {
 			case "down", "error":
 				icon = "✗"
 			}
-			sb.WriteString(fmt.Sprintf("  %s  %s  %dms  %s\n",
-				r.CheckedAt.Format("15:04:05"), icon, r.ResponseTime, r.Status))
+			line := fmt.Sprintf("  %s  %s  %dms  %s", r.CheckedAt.Format("15:04:05"), icon, r.ResponseTime, r.Status)
+			if r.Error != "" {
+				line += fmt.Sprintf(" — %s", r.Error)
+			}
+			sb.WriteString(line + "\n")
 		}
 
 		// Sparkline
