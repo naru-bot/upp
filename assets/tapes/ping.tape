@@ -1,26 +1,20 @@
 # Quick Ping Diagnostics
 Output assets/ping.gif
 
-Set FontSize 17
-Set Width 1200
-Set Height 600
+Set FontSize 22
+Set Width 900
+Set Height 450
+Set LineHeight 1.4
+Set Padding 20
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 50ms
+Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "# Quick check — no database, no setup"
-Enter
-Sleep 1s
-
-Type "watchdog ping https://api.example.com/health"
-Enter
-Sleep 3s
-
-Type "watchdog ping https://httpbin.org/status/503"
-Enter
-Sleep 3s
-
 Type "watchdog ping https://example.com"
+Enter
+Sleep 3s
+
+Type "watchdog ping https://httpbin.org/get"
 Enter
 Sleep 3s
 

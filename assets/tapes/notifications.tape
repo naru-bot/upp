@@ -1,30 +1,24 @@
-# Notification Channels Setup
+# Notifications Setup
 Output assets/notifications.gif
 
-Set FontSize 16
-Set Width 1200
-Set Height 650
+Set FontSize 20
+Set Width 950
+Set Height 500
+Set LineHeight 1.3
+Set Padding 20
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 40ms
+Set TypingSpeed 35ms
 
 Sleep 500ms
-Type `watchdog notify add --name tg --type telegram --config '{"bot_token":"123:ABC","chat_id":"-100123"}'`
+Type `watchdog notify add --name tg --type telegram --config '{"bot_token":"123:ABC","chat_id":"-100"}'`
 Enter
-Sleep 2s
-
-Type `watchdog notify add --name discord --type discord --config '{"webhook_url":"https://discord.com/api/webhooks/123/abc"}'`
-Enter
-Sleep 2s
-
-Type `watchdog notify add --name alerts --type webhook --config '{"url":"https://hooks.slack.com/services/T00/B00/xxx"}'`
-Enter
-Sleep 2s
+Sleep 2.5s
 
 Type "watchdog notify list"
 Enter
 Sleep 3s
 
-Type "watchdog notify remove alerts"
+Type "watchdog notify remove tg"
 Enter
 Sleep 2s
 

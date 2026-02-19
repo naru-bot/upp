@@ -1,32 +1,20 @@
 # TUI Dashboard Demo
+# Pre-requisite: targets should already exist in DB before recording
 Output assets/tui.gif
 
-Set FontSize 16
-Set Width 1200
-Set Height 650
+Set FontSize 20
+Set Width 1000
+Set Height 600
+Set LineHeight 1.3
+Set Padding 20
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 50ms
+Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog add https://example.com --name 'My Site'"
-Enter
-Sleep 1s
-Type "watchdog add https://api.example.com/health --name 'API'"
-Enter
-Sleep 1s
-Type "watchdog add https://blog.example.com --name 'Blog'"
-Enter
-Sleep 1s
-
-Type "watchdog check"
-Enter
-Sleep 2s
-
 Type "watchdog tui"
 Enter
 Sleep 3s
 
-# Navigate the TUI
 Down
 Sleep 800ms
 Down
@@ -34,14 +22,14 @@ Sleep 800ms
 Up
 Sleep 800ms
 
-# Open details
 Enter
-Sleep 2s
+Sleep 2.5s
 
-# Trigger a check
 Type "c"
-Sleep 2s
+Sleep 2.5s
 
-# Quit
+Escape
+Sleep 1s
+
 Type "q"
 Sleep 1s
