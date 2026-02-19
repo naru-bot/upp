@@ -44,22 +44,18 @@
 
 You just want to know if your website is up. Maybe get alerted when a pricing page changes. Simple, right?
 
-**Nope.** In 2026, here's what that actually looks like:
+Most existing tools are great at what they do — [Uptime Kuma](https://github.com/louislam/uptime-kuma) gives you a beautiful dashboard, [changedetection.io](https://github.com/dgtlmoon/changedetection.io) handles page diffing, [Statping-ng](https://github.com/statping-ng/statping-ng) gives you status pages, [EaseProbe](https://github.com/megaease/easeprobe) does multi-protocol probing. But they all share a common pattern:
 
-1. Spin up an Uptime Kuma Docker container for uptime monitoring
-2. Spin up a changedetection.io Docker container for change detection
-3. Maybe throw in Statping-ng for a status page, or EaseProbe for multi-protocol probes
-4. Configure each one through separate web UIs
-5. Keep them all running 24/7, eating RAM on your server
-6. Open a browser every time you want to check status
-7. Try to integrate with your scripts or AI agent — good luck parsing those web APIs
-8. Realize you're running **multiple services with separate databases** just to watch three websites
+1. **Docker required** — spin up a container, expose a port, manage volumes
+2. **Web UI only** — need a browser to check on things
+3. **One concern each** — want uptime *and* change detection? Run two services
+4. **Hard to script** — integrating with cron jobs or AI agents means wrestling with REST APIs
 
-**Watchdog is the tool I built because I got tired of this nonsense.**
+For teams running production infrastructure with public status pages, these tools make perfect sense. But if you just want to monitor a handful of sites from your terminal — or let an AI agent keep an eye on things — there should be a simpler way.
 
-One 17MB binary. Works from your terminal. Works over SSH. Works in cron jobs. Works with AI agents out of the box. Install it, add a URL, done. No YAML manifests, no Docker Compose files, no port forwarding, no reverse proxies.
+**That's why Watchdog exists.**
 
-If you've ever mass-`docker rm`'d monitoring containers in frustration, this is for you.
+One 17MB binary. Works from your terminal. Works over SSH. Works in cron jobs. Works with AI agents out of the box. Install it, add a URL, done. No containers, no web UIs, no port forwarding.
 
 ---
 
