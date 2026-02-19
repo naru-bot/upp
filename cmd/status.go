@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -167,17 +168,30 @@ func runStatus(cmd *cobra.Command, args []string) {
 			}
 		}
 
+		// Append short error to status if down
+		if o.LastError != "" && (o.LastStatus == "down" || o.LastStatus == "error") {
+			shortErr := shortenError(o.LastError)
+			if !noColor && !jsonOutput {
+				shortErr = colorRed(shortErr)
+			}
+			statusStr += " " + shortErr
+		}
+
 		fmt.Fprintf(w, "%s\t%s\t%.0fms\t%d\t%d\t%s\t%s\n",
 			truncate(o.Target, 25), uptimeStr, o.AvgResponseMs, o.TotalChecks, o.Changes, o.Sparkline, statusStr)
-		if o.LastError != "" && (o.LastStatus == "down" || o.LastStatus == "error") {
-			errStr := o.LastError
-			if !noColor && !jsonOutput {
-				errStr = colorRed(errStr)
-			}
-			fmt.Fprintf(w, "  ↳ %s\t\t\t\t\t\t\n", errStr)
-		}
 	}
 	w.Flush()
+}
+
+func shortenError(err string) string {
+	// Extract meaningful part from verbose Go errors
+	if idx := strings.LastIndex(err, ": "); idx != -1 {
+		err = err[idx+2:]
+	}
+	if len(err) > 40 {
+		err = err[:37] + "..."
+	}
+	return "(" + err + ")"
 }
 
 func buildSparkline(values []int64, maxLen int) string {
