@@ -182,6 +182,7 @@ type tuiModel struct {
 	table      table.Model
 	targets    []db.Target
 	results    map[int64]*checker.Result
+	checkingIDs map[int64]bool
 	view       view
 	selected   *db.Target
 	detail     string
@@ -227,7 +228,8 @@ func newTUIModel() tuiModel {
 
 	return tuiModel{
 		table:   t,
-		results: make(map[int64]*checker.Result),
+		results:     make(map[int64]*checker.Result),
+		checkingIDs: make(map[int64]bool),
 		help:    help.New(),
 		status:  "Loading...",
 	}
@@ -413,6 +415,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.tick()
 
 	case checkDoneMsg:
+		delete(m.checkingIDs, msg.targetID)
 		m.results[msg.targetID] = msg.result
 		// Save result to DB
 		cr := &db.CheckResult{
@@ -478,7 +481,10 @@ func (m *tuiModel) refreshData() {
 			spark = buildSparkline(times, 10)
 		}
 
-		if t.Paused {
+		if m.checkingIDs[t.ID] {
+			status = "⟳ checking…"
+			respTime = "—"
+		} else if t.Paused {
 			status = "paused"
 		}
 
@@ -690,6 +696,8 @@ func (m *tuiModel) saveEdit() error {
 
 func (m *tuiModel) runCheck(t *db.Target) tea.Cmd {
 	target := *t
+	m.checkingIDs[target.ID] = true
+	m.refreshData()
 	return func() tea.Msg {
 		result := checker.Check(&target)
 		return checkDoneMsg{targetID: target.ID, result: result}
