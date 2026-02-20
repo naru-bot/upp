@@ -27,6 +27,8 @@
   - [JSON Output for AI Agents](#-json-output-for-ai-agents)
   - [Notifications](#-notifications)
   - [Daemon Mode](#-daemon-mode)
+- [Check Types](#check-types)
+- [Target Configuration Fields](#target-configuration-fields)
 - [Tutorial: Monitor Your First Website in 60 Seconds](#tutorial-monitor-your-first-website-in-60-seconds)
 - [AI Agent Integration](#ai-agent-integration)
 - [How Watchdog Is Different](#how-watchdog-is-different)
@@ -205,6 +207,73 @@ See [Systemd Service](#systemd-service) for production setup.
 
 ---
 
+## Check Types
+
+Watchdog supports multiple monitoring approaches for different use cases:
+
+### HTTP (default)
+- Monitors HTTP/HTTPS endpoints
+- Tracks status codes, response times, SSL expiry
+- Supports CSS selectors for targeted change detection
+- Supports expected keyword matching
+- Examples:
+  ```bash
+  watchdog add https://example.com --name "My Site"
+  watchdog add https://example.com/pricing --selector "div.price" --name "Pricing"
+  watchdog add https://api.example.com/health --expect "ok" --name "API Health"
+  ```
+
+### TCP
+- Tests TCP port connectivity
+- Example: `watchdog add example.com:3306 --type tcp --name "MySQL"`
+
+### Ping
+- ICMP-style connectivity check
+- Example: `watchdog add example.com --type ping --name "Server Ping"`
+
+### DNS
+- DNS resolution check
+- Example: `watchdog add example.com --type dns --name "DNS Check"`
+
+### Visual (screenshot diff)
+- Takes screenshots via headless browser and compares pixel-by-pixel
+- Configurable threshold percentage (default 5%)
+- Requires a headless browser (run `watchdog doctor` to check)
+- Examples:
+  ```bash
+  watchdog add https://example.com --type visual --name "Homepage Visual"
+  watchdog add https://example.com --type visual --threshold 10.0 --name "Loose Visual"
+  ```
+
+### WHOIS (domain monitoring)
+- Monitors WHOIS data for changes (registrar, nameservers, status)
+- Tracks domain expiry and warns when <30 days
+- Domain is extracted from URL automatically
+- Example:
+  ```bash
+  watchdog add https://example.com --type whois --name "Domain WHOIS"
+  ```
+
+---
+
+## Target Configuration Fields
+
+When using the TUI add/edit screen, these fields control how your targets are monitored:
+
+| Field | Description | Applies to |
+|-------|-------------|------------|
+| Name | Display name for the target | All types |
+| URL | Target URL or address | All types |
+| Type | Check type (http, tcp, ping, dns, visual, whois) | All types |
+| Interval | Seconds between checks (default: 300) | All types |
+| Timeout | Request timeout in seconds (default: 30, visual: 60 recommended) | All types |
+| Retries | Retry count before marking down (default: 1) | All types |
+| Selector | CSS selector to monitor specific page element | http |
+| Expect | Expected keyword in response body | http |
+| Threshold (%) | Visual diff percentage to trigger change (default: 5.0) | visual |
+
+---
+
 ## Tutorial: Monitor Your First Website in 60 Seconds
 
 **Step 1** — Install Watchdog:
@@ -293,6 +362,7 @@ watchdog diff "Pricing Page" --json
 |---|---|---|
 | Install | Docker / server setup | **Single binary, zero dependencies** |
 | Interface | Web browser required | **Terminal / TUI / JSON** |
+| Check types | HTTP only | **HTTP, TCP, Ping, DNS, Visual, WHOIS** |
 | Uptime + change detection | Usually separate tools | **All-in-one** |
 | AI & automation friendly | REST API wrappers | **Native CLI + JSON on every command** |
 | Interactive dashboard | Browser tab | **TUI that works over SSH** |
@@ -392,6 +462,7 @@ make cross
 | `notify add\|list\|remove` | Manage notification channels |
 | `export` | Export data as JSON or CSV |
 | `daemon` | Run as background service |
+| `doctor` | Check system dependencies (headless browser for visual checks) |
 | `completion` | Generate shell completions (bash/zsh/fish/powershell) |
 | `version` | Print version |
 
@@ -408,10 +479,14 @@ make cross
 
 ```bash
 watchdog add <url> [flags]
-  --name        Target name
-  --type        Check type: http, tcp, ping, dns
-  --interval    Check interval in seconds (default: 300)
-  --selector    CSS selector for change detection
+  --name         Target name (auto-generated from URL if omitted)
+  --type         Check type: http, tcp, ping, dns, visual, whois (default: http)
+  --interval     Check interval in seconds (default: 300)
+  --selector     CSS selector for change detection (http type)
+  --expect       Expected keyword in response body (http type)
+  --timeout      Request timeout in seconds (default: 30)
+  --retries      Retry count before marking as down (default: 1)
+  --threshold    Visual diff threshold percentage (visual type, default: 5.0)
 ```
 
 ---
