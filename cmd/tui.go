@@ -90,6 +90,7 @@ const (
 	viewList view = iota
 	viewDetail
 	viewEdit
+	viewAdd
 )
 
 // Edit field indices
@@ -306,6 +307,47 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		if m.view == viewAdd {
+			switch msg.Type {
+			case tea.KeyEsc:
+				m.view = viewList
+				return m, nil
+			case tea.KeyTab, tea.KeyDown:
+				m.editFocus = (m.editFocus + 1) % editFieldCount
+				return m, m.focusEditField()
+			case tea.KeyShiftTab, tea.KeyUp:
+				m.editFocus = (m.editFocus - 1 + editFieldCount) % editFieldCount
+				return m, m.focusEditField()
+			case tea.KeyEnter:
+				if err := m.saveAdd(); err != nil {
+					m.status = fmt.Sprintf("Error: %s", err)
+				} else {
+					m.status = "✓ Target added"
+					m.refreshData()
+				}
+				m.view = viewList
+				return m, nil
+			case tea.KeyLeft, tea.KeyRight, tea.KeySpace:
+				if m.editFocus == editType {
+					cur := m.editInputs[editType].Value()
+					if msg.Type == tea.KeyLeft {
+						m.editInputs[editType].SetValue(prevType(cur))
+					} else {
+						m.editInputs[editType].SetValue(nextType(cur))
+					}
+					return m, nil
+				}
+			}
+			if m.editFocus == editType {
+				if msg.Type == tea.KeyRunes {
+					return m, nil
+				}
+			}
+			var cmd tea.Cmd
+			m.editInputs[m.editFocus], cmd = m.editInputs[m.editFocus].Update(msg)
+			return m, cmd
+		}
+
 		if m.view == viewDetail {
 			switch {
 			case key.Matches(msg, keys.Quit), key.Matches(msg, keys.Back):
@@ -358,6 +400,10 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Refresh):
 			m.status = "Refreshing..."
 			return m, m.loadTargets
+		case msg.String() == "a":
+			m.initAddInputs()
+			m.view = viewAdd
+			return m, m.focusEditField()
 		}
 
 	case tickMsg:
@@ -519,6 +565,57 @@ func (m *tuiModel) updateDetail() {
 	m.detail = sb.String()
 }
 
+func (m *tuiModel) initAddInputs() {
+	m.editInputs = make([]textinput.Model, editFieldCount)
+
+	for i := 0; i < editFieldCount; i++ {
+		ti := textinput.New()
+		ti.Prompt = fmt.Sprintf("  %s: ", editFieldLabels[i])
+		ti.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true)
+		ti.CharLimit = 256
+		m.editInputs[i] = ti
+	}
+
+	m.editInputs[editName].Placeholder = "My Site"
+	m.editInputs[editURL].Placeholder = "https://example.com"
+	m.editInputs[editType].SetValue("http")
+	m.editInputs[editInterval].SetValue("300")
+	m.editInputs[editTimeout].SetValue("30")
+	m.editInputs[editRetries].SetValue("1")
+	m.editInputs[editSelector].Placeholder = "CSS selector (optional)"
+	m.editInputs[editExpect].Placeholder = "Expected keyword (optional)"
+
+	m.editFocus = 0
+}
+
+func (m *tuiModel) saveAdd() error {
+	url := m.editInputs[editURL].Value()
+	if url == "" {
+		return fmt.Errorf("URL is required")
+	}
+
+	name := m.editInputs[editName].Value()
+	typ := m.editInputs[editType].Value()
+	selector := m.editInputs[editSelector].Value()
+	expect := m.editInputs[editExpect].Value()
+
+	interval := 300
+	if v, err := strconv.Atoi(m.editInputs[editInterval].Value()); err == nil && v > 0 {
+		interval = v
+	}
+	timeout := 30
+	if v, err := strconv.Atoi(m.editInputs[editTimeout].Value()); err == nil && v > 0 {
+		timeout = v
+	}
+	retries := 1
+	if v, err := strconv.Atoi(m.editInputs[editRetries].Value()); err == nil && v > 0 {
+		retries = v
+	}
+
+	_, err := db.AddTarget(name, url, typ, interval, selector, "", expect, timeout, retries)
+	return err
+}
+
 func (m *tuiModel) initEditInputs() {
 	m.editInputs = make([]textinput.Model, editFieldCount)
 	t := m.selected
@@ -636,10 +733,13 @@ func (m tuiModel) View() string {
 	title := titleStyle.Render(" 🐕 Watchdog ")
 	sb.WriteString(title + "\n\n")
 
-	if m.view == viewEdit && m.selected != nil {
+	if m.view == viewAdd || (m.view == viewEdit && m.selected != nil) {
 		// Edit view
-		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4")).Render(
-			fmt.Sprintf("Editing: %s", m.selected.Name))
+		headerText := "Add New Target"
+		if m.view == viewEdit && m.selected != nil {
+			headerText = fmt.Sprintf("Editing: %s", m.selected.Name)
+		}
+		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4")).Render(headerText)
 		sb.WriteString(header + "\n\n")
 
 		var fields strings.Builder
