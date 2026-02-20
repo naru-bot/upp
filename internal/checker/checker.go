@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/user"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -312,7 +313,13 @@ func findHeadlessBrowser() (string, []string) {
 func snapWritableDir() string {
 	home := os.Getenv("HOME")
 	if home == "" {
-		home = "/"
+		if h, err := os.UserHomeDir(); err == nil && h != "" {
+			home = h
+		} else if u, err := user.Current(); err == nil {
+			home = u.HomeDir
+		} else {
+			home = "/root"
+		}
 	}
 	snapDir := filepath.Join(home, "snap", "chromium", "common", "watchdog-tmp")
 	os.MkdirAll(snapDir, 0755)
