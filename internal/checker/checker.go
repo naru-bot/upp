@@ -337,21 +337,36 @@ func takeScreenshot(url, outputPath string, timeout time.Duration) error {
 	)
 
 	cmd := exec.Command(binary, cmdArgs...)
-	
-	// Set timeout
-	if timeout > 0 {
-		go func() {
-			time.Sleep(timeout)
-			if cmd.Process != nil {
-				cmd.Process.Kill()
-			}
-		}()
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+
+	// Use context-based timeout for clean cancellation
+	done := make(chan error, 1)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start browser: %w", err)
 	}
 
-	if err := cmd.Run(); err != nil {
-		os.Remove(tmpFile)
-		return err
+	go func() { done <- cmd.Wait() }()
+
+	var err error
+	if timeout > 0 {
+		select {
+		case err = <-done:
+		case <-time.After(timeout):
+			cmd.Process.Kill()
+			return fmt.Errorf("screenshot timed out after %v", timeout)
+		}
+	} else {
+		err = <-done
 	}
+
+	if err != nil {
+		os.Remove(tmpFile)
+		return fmt.Errorf("browser exited with error: %w", err)
+	}
+
+	// Small delay to ensure file is fully flushed to disk
+	time.Sleep(200 * time.Millisecond)
 
 	// Move from snap-writable temp to the actual output path
 	if tmpFile != outputPath {
