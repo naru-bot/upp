@@ -8,12 +8,40 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/naru-bot/watchdog/internal/db"
 )
+
+// Patterns for dynamic content that should be ignored when computing content hashes.
+// These change on every page load but don't represent meaningful content changes.
+var dynamicPatterns = []*regexp.Regexp{
+	// CSRF tokens (Laravel, Rails, Django, etc.)
+	regexp.MustCompile(`csrf[_-]?token["']?\s*[:=]\s*["'][^"']{20,}["']`),
+	regexp.MustCompile(`name=["']_token["']\s+(?:value|content)=["'][^"']+["']`),
+	regexp.MustCompile(`(?:content|value)=["'][^"']+["']\s+name=["']_token["']`),
+	regexp.MustCompile(`name=["']csrf[_-]?token["']\s+(?:content|value)=["'][^"']+["']`),
+	regexp.MustCompile(`(?:content|value)=["'][^"']+["']\s+name=["']csrf[_-]?token["']`),
+	// Nonces (CSP, WordPress, etc.)
+	regexp.MustCompile(`nonce=["'][^"']+["']`),
+	// Inline data-page JSON with csrf_token field (Inertia.js / Laravel)
+	regexp.MustCompile(`"csrf_token"\s*:\s*"[^"]+"`),
+	// HTML-encoded variants (e.g. in data-page attributes)
+	regexp.MustCompile(`(?:&quot;|&#34;)csrf_token(?:&quot;|&#34;)\s*:\s*(?:&quot;|&#34;)[^&]+(?:&quot;|&#34;)`),
+	regexp.MustCompile(`(?:&quot;|&#34;)_token(?:&quot;|&#34;)\s*:\s*(?:&quot;|&#34;)[^&]+(?:&quot;|&#34;)`),
+}
+
+// stripDynamicContent removes known dynamic tokens from content before hashing.
+func stripDynamicContent(content string) string {
+	result := content
+	for _, pat := range dynamicPatterns {
+		result = pat.ReplaceAllString(result, "")
+	}
+	return result
+}
 
 type Result struct {
 	Status       string
@@ -126,7 +154,10 @@ func checkHTTP(target *db.Target) *Result {
 	}
 
 	result.Content = content
-	hash := sha256.Sum256([]byte(content))
+	// Strip dynamic tokens (CSRF, nonces, etc.) before hashing
+	// so that only meaningful content changes are detected
+	normalized := stripDynamicContent(content)
+	hash := sha256.Sum256([]byte(normalized))
 	result.ContentHash = fmt.Sprintf("%x", hash)
 
 	// Check expected keyword
