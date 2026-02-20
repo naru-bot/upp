@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -135,35 +132,31 @@ func prevType(current string) string {
 }
 
 type keyMap struct {
-	Up           key.Binding
-	Down         key.Binding
-	Enter        key.Binding
-	Check        key.Binding
-	CheckAll     key.Binding
-	Delete       key.Binding
-	Pause        key.Binding
-	Refresh      key.Binding
-	Help         key.Binding
-	Quit         key.Binding
-	Back         key.Binding
-	Screenshot   key.Binding
-	PrevScreenshot key.Binding
+	Up      key.Binding
+	Down    key.Binding
+	Enter   key.Binding
+	Check   key.Binding
+	CheckAll key.Binding
+	Delete  key.Binding
+	Pause   key.Binding
+	Refresh key.Binding
+	Help    key.Binding
+	Quit    key.Binding
+	Back    key.Binding
 }
 
 var keys = keyMap{
-	Up:           key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
-	Down:         key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
-	Enter:        key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "details")),
-	Check:        key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "check")),
-	CheckAll:     key.NewBinding(key.WithKeys("C"), key.WithHelp("C", "check all")),
-	Delete:       key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
-	Pause:        key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "pause/resume")),
-	Refresh:      key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh")),
-	Help:         key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
-	Quit:         key.NewBinding(key.WithKeys("q", "esc"), key.WithHelp("q", "quit")),
-	Back:         key.NewBinding(key.WithKeys("esc", "backspace"), key.WithHelp("esc", "back")),
-	Screenshot:   key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "screenshot")),
-	PrevScreenshot: key.NewBinding(key.WithKeys("S"), key.WithHelp("S", "prev screenshot")),
+	Up:      key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "up")),
+	Down:    key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "down")),
+	Enter:   key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "details")),
+	Check:   key.NewBinding(key.WithKeys("c"), key.WithHelp("c", "check")),
+	CheckAll: key.NewBinding(key.WithKeys("C"), key.WithHelp("C", "check all")),
+	Delete:  key.NewBinding(key.WithKeys("d"), key.WithHelp("d", "delete")),
+	Pause:   key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "pause/resume")),
+	Refresh: key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "refresh")),
+	Help:    key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "help")),
+	Quit:    key.NewBinding(key.WithKeys("q", "esc"), key.WithHelp("q", "quit")),
+	Back:    key.NewBinding(key.WithKeys("esc", "backspace"), key.WithHelp("esc", "back")),
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -373,16 +366,6 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.view = viewEdit
 					return m, m.focusEditField()
 				}
-			case msg.String() == "s":
-				if m.selected != nil && m.selected.Type == "visual" {
-					currentPath := getScreenshotPath(m.selected.ID, true)
-					return m, m.viewFullScreenshot(currentPath)
-				}
-			case msg.String() == "S":
-				if m.selected != nil && m.selected.Type == "visual" {
-					previousPath := getScreenshotPath(m.selected.ID, false)
-					return m, m.viewFullScreenshot(previousPath)
-				}
 			}
 			return m, nil
 		}
@@ -579,25 +562,6 @@ func (m *tuiModel) updateDetail() {
 		spark := buildSparkline(times, 20)
 		sb.WriteString(fmt.Sprintf("\nResponse trend: %s\n", spark))
 	}
-	
-	// Screenshot preview for visual targets
-	if t.Type == "visual" {
-		sb.WriteString("\n")
-		currentPath := getScreenshotPath(t.ID, true)
-		previousPath := getScreenshotPath(t.ID, false)
-
-		if _, err := os.Stat(currentPath); err == nil {
-			sb.WriteString("📸 Current Screenshot (s: full, S: previous):\n")
-			preview := generateScreenshotPreview(currentPath)
-			sb.WriteString(preview)
-			sb.WriteString("\n")
-			if _, err := os.Stat(previousPath); err == nil {
-				sb.WriteString("  (previous screenshot available — press S to view)\n")
-			}
-		} else {
-			sb.WriteString("📸 No screenshots yet — run a check first\n")
-		}
-	}
 
 	m.detail = sb.String()
 }
@@ -768,53 +732,6 @@ func (m *tuiModel) togglePause() tea.Cmd {
 	return nil
 }
 
-// getScreenshotPath returns the screenshot path for a target
-func getScreenshotPath(targetID int64, current bool) string {
-	dataDir := filepath.Dir(db.GetDBPath())
-	screenshotDir := filepath.Join(dataDir, "screenshots")
-	
-	if current {
-		return filepath.Join(screenshotDir, fmt.Sprintf("%d_current.png", targetID))
-	}
-	return filepath.Join(screenshotDir, fmt.Sprintf("%d_previous.png", targetID))
-}
-
-// generateScreenshotPreview creates ANSI art from a screenshot using chafa
-func generateScreenshotPreview(screenshotPath string) string {
-	// Check if chafa is available
-	if _, err := exec.LookPath("chafa"); err != nil {
-		return "(install chafa for screenshot preview)"
-	}
-	
-	// Check if screenshot exists
-	if _, err := os.Stat(screenshotPath); err != nil {
-		return "(no screenshot available)"
-	}
-	
-	// Run chafa to generate ANSI art
-	cmd := exec.Command("chafa", "--size=30x10", "--format=symbols", screenshotPath)
-	output, err := cmd.Output()
-	if err != nil {
-		return fmt.Sprintf("(chafa error: %v)", err)
-	}
-	
-	return string(output)
-}
-
-// viewFullScreenshot opens a full-size screenshot using chafa
-func (m *tuiModel) viewFullScreenshot(screenshotPath string) tea.Cmd {
-	// Check if chafa is available and screenshot exists
-	if _, err := exec.LookPath("chafa"); err != nil {
-		return nil
-	}
-	
-	if _, err := os.Stat(screenshotPath); err != nil {
-		return nil
-	}
-	
-	return tea.ExecProcess(exec.Command("chafa", "--size=auto", screenshotPath), nil)
-}
-
 func (m tuiModel) View() string {
 	if m.width == 0 {
 		return "Loading..."
@@ -869,13 +786,7 @@ func (m tuiModel) View() string {
 		sb.WriteString(header + "\n\n")
 		sb.WriteString(detailBoxStyle.Render(m.detail))
 		sb.WriteString("\n\n")
-		
-		// Show different help text for visual targets
-		helpText := "e: edit • c: check • esc: back"
-		if m.selected.Type == "visual" {
-			helpText = "e: edit • c: check • s/S: screenshot • esc: back"
-		}
-		sb.WriteString(helpStyle.Render(helpText))
+		sb.WriteString(helpStyle.Render("e: edit • c: check • esc: back"))
 	} else {
 		// List view
 		sb.WriteString(m.table.View())
