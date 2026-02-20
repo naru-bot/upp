@@ -109,6 +109,26 @@ var editFieldLabels = [editFieldCount]string{
 	"Name", "URL", "Type", "Interval (s)", "Timeout (s)", "Retries", "Selector", "Expect",
 }
 
+var typeOptions = []string{"http", "tcp", "ping", "dns"}
+
+func nextType(current string) string {
+	for i, t := range typeOptions {
+		if t == current {
+			return typeOptions[(i+1)%len(typeOptions)]
+		}
+	}
+	return typeOptions[0]
+}
+
+func prevType(current string) string {
+	for i, t := range typeOptions {
+		if t == current {
+			return typeOptions[(i-1+len(typeOptions))%len(typeOptions)]
+		}
+	}
+	return typeOptions[0]
+}
+
 type keyMap struct {
 	Up      key.Binding
 	Down    key.Binding
@@ -261,6 +281,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.view = viewDetail
 				return m, nil
+			case tea.KeyLeft, tea.KeyRight, tea.KeySpace:
+				// Type field: cycle through options
+				if m.editFocus == editType {
+					cur := m.editInputs[editType].Value()
+					if msg.Type == tea.KeyLeft {
+						m.editInputs[editType].SetValue(prevType(cur))
+					} else {
+						m.editInputs[editType].SetValue(nextType(cur))
+					}
+					return m, nil
+				}
+			}
+			// Skip text input update for type field (not freeform)
+			if m.editFocus == editType {
+				// Only allow tab/arrow navigation, ignore typed chars
+				if msg.Type == tea.KeyRunes {
+					return m, nil
+				}
 			}
 			// Update the focused input
 			var cmd tea.Cmd
@@ -610,11 +648,27 @@ func (m tuiModel) View() string {
 			if i == m.editFocus {
 				cursor = "▸ "
 			}
-			fields.WriteString(cursor + m.editInputs[i].View() + "\n")
+			if i == editType {
+				// Render as selectable options instead of text input
+				label := lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true).Render(
+					fmt.Sprintf("  %s: ", editFieldLabels[i]))
+				cur := m.editInputs[editType].Value()
+				var opts []string
+				for _, t := range typeOptions {
+					if t == cur {
+						opts = append(opts, lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#04B575")).Render("["+t+"]"))
+					} else {
+						opts = append(opts, lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).Render(" "+t+" "))
+					}
+				}
+				fields.WriteString(cursor + label + strings.Join(opts, " ") + "\n")
+			} else {
+				fields.WriteString(cursor + m.editInputs[i].View() + "\n")
+			}
 		}
 		sb.WriteString(detailBoxStyle.Width(70).Render(fields.String()))
 		sb.WriteString("\n\n")
-		sb.WriteString(helpStyle.Render("↑↓/tab: navigate fields • enter: save • esc: cancel"))
+		sb.WriteString(helpStyle.Render("↑↓/tab: navigate • ←→/space: change type • enter: save • esc: cancel"))
 	} else if m.view == viewDetail && m.selected != nil {
 		// Detail view
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7D56F4")).Render(
