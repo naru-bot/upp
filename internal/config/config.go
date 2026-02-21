@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Defaults   Defaults          `yaml:"defaults"`
 	Display    Display           `yaml:"display"`
+	Thresholds Thresholds        `yaml:"thresholds"`
 	Headers    map[string]string `yaml:"headers,omitempty"`
 }
 
@@ -28,6 +29,10 @@ type Display struct {
 	Verbose bool   `yaml:"verbose"`
 }
 
+type Thresholds struct {
+	SSLWarnDays int `yaml:"ssl_warn_days"` // show SSL expiry warning when days left < this (default: 30)
+}
+
 var current *Config
 
 func Default() *Config {
@@ -43,6 +48,9 @@ func Default() *Config {
 			Color:   true,
 			Format:  "table",
 			Verbose: false,
+		},
+		Thresholds: Thresholds{
+			SSLWarnDays: 30,
 		},
 	}
 }
@@ -117,6 +125,14 @@ func Save(cfg *Config) error {
 	}
 
 	return os.WriteFile(path, data, 0644)
+}
+
+// SSLWarnDays returns the configured SSL warning threshold, defaulting to 30.
+func (c *Config) SSLWarnDays() int {
+	if c.Thresholds.SSLWarnDays <= 0 {
+		return 30
+	}
+	return c.Thresholds.SSLWarnDays
 }
 
 func Get() *Config {

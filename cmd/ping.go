@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/config"
 	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
@@ -112,10 +113,17 @@ func runPing(cmd *cobra.Command, args []string) {
 			}
 			if result.SSLExpiry != nil {
 				days := int(time.Until(*result.SSLExpiry).Hours() / 24)
-				if days < 30 {
-					fmt.Printf(" %s", colorYellow(fmt.Sprintf("[SSL: %dd]", days)))
-				} else {
-					fmt.Printf(" [SSL: %dd]", days)
+				warnDays := config.Get().SSLWarnDays()
+				if days < warnDays {
+					sslText := fmt.Sprintf("[SSL: %dd]", days)
+					if !noColor {
+						if days < warnDays/2 {
+							sslText = colorRed(sslText)
+						} else {
+							sslText = colorYellow(sslText)
+						}
+					}
+					fmt.Printf(" %s", sslText)
 				}
 			}
 			if out.BodyMatch != nil {

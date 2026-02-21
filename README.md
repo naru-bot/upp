@@ -35,6 +35,7 @@
 - [Installation](#installation)
 - [All Commands](#all-commands)
 - [Configuration](#configuration)
+  - [Reference](#reference)
 - [Running as a Background Service](#running-as-a-background-service)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
@@ -497,18 +498,65 @@ upp add <url> [flags]
 upp init    # Creates ~/.config/upp/config.yml
 ```
 
+Config file location: `~/.config/upp/config.yml` (or `$XDG_CONFIG_HOME/upp/config.yml`)
+
+### Full example
+
 ```yaml
 defaults:
-  interval: 300        # Check interval (seconds)
-  type: http           # Default check type
-  timeout: 30          # HTTP timeout (seconds)
-  retry_count: 1       # Retries before marking down
+  interval: 300
+  type: http
+  timeout: 30
+  retry_count: 1
   user_agent: upp/1.0
 
 display:
   color: true
   format: table
   verbose: false
+
+thresholds:
+  ssl_warn_days: 30
+
+headers:
+  Authorization: Bearer my-token
+  X-Custom: value
+```
+
+### Reference
+
+#### `defaults` — Default values for new targets
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `interval` | int | `300` | Check interval in seconds. Applied to new targets when `--interval` is not specified. |
+| `type` | string | `http` | Default check type when `--type` is not specified. One of: `http`, `tcp`, `ping`, `dns`, `visual`, `whois`. |
+| `timeout` | int | `30` | HTTP/TCP request timeout in seconds. For visual checks, consider increasing to 60. |
+| `retry_count` | int | `1` | Number of retries before marking a target as down. Helps avoid false positives from transient failures. |
+| `user_agent` | string | `upp/1.0` | User-Agent header sent with HTTP requests. Some sites block default Go user agents. |
+
+#### `display` — Output formatting
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `color` | bool | `true` | Enable colored output (status indicators, diffs, warnings). Disable for piping to files. Overridden by `--no-color` flag. |
+| `format` | string | `table` | Default output format: `table`, `json`, or `compact`. Overridden by `--json` flag. |
+| `verbose` | bool | `false` | Show additional detail in output (response headers, timing breakdown). Overridden by `-v` flag. |
+
+#### `thresholds` — Warning thresholds
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `ssl_warn_days` | int | `30` | Show SSL certificate expiry warning when days remaining is below this value. Certs with more days left are hidden from output. Red warning at half this value (e.g., <15 days at default). Set to `0` to always hide, or `365` to always show. |
+
+#### `headers` — Custom HTTP headers
+
+Key-value pairs added to every HTTP request. Useful for authentication tokens, custom identifiers, or bypassing certain WAF rules.
+
+```yaml
+headers:
+  Authorization: Bearer my-api-token
+  Accept-Language: en-US
 ```
 
 ### Data storage
