@@ -176,6 +176,8 @@ func checkHTTP(target *db.Target) *Result {
 		if err == nil {
 			var selected []string
 			doc.Find(target.Selector).Each(func(i int, s *goquery.Selection) {
+				// Strip style/script so CSS/JS doesn't pollute extracted text.
+				s.Find("style,script").Remove()
 				selected = append(selected, strings.TrimSpace(s.Text()))
 			})
 			if len(selected) > 0 {
