@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/naru-bot/upp/internal/db"
@@ -330,27 +330,71 @@ func runStatus(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	// Build all cell values first to compute column widths
+	// Use visible length (stripping ANSI) for alignment
+	ansiRe := regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+	numCols := len(cols)
+	// Header row + separator + data rows
+	allRows := make([][]string, 0, len(outputs)+2)
 
 	// Header
-	var headers []string
-	var seps []string
-	for _, c := range cols {
-		headers = append(headers, columnHeader(c))
-		seps = append(seps, columnSeparator(c))
+	headerRow := make([]string, numCols)
+	for i, c := range cols {
+		headerRow[i] = columnHeader(c)
 	}
-	fmt.Fprintf(w, "%s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "%s\n", strings.Join(seps, "\t"))
+	allRows = append(allRows, headerRow)
 
-	// Rows
+	// Data rows
 	for i := range outputs {
-		var vals []string
-		for _, c := range cols {
-			vals = append(vals, columnValue(c, &outputs[i]))
+		row := make([]string, numCols)
+		for j, c := range cols {
+			row[j] = columnValue(c, &outputs[i])
 		}
-		fmt.Fprintf(w, "%s\n", strings.Join(vals, "\t"))
+		allRows = append(allRows, row)
 	}
-	w.Flush()
+
+	// Compute max visible width per column
+	colWidths := make([]int, numCols)
+	for _, row := range allRows {
+		for j, cell := range row {
+			visible := len(ansiRe.ReplaceAllString(cell, ""))
+			if visible > colWidths[j] {
+				colWidths[j] = visible
+			}
+		}
+	}
+
+	// Print header
+	printPaddedRow(os.Stdout, allRows[0], colWidths, ansiRe)
+	// Separator
+	sepRow := make([]string, numCols)
+	for i, w := range colWidths {
+		sepRow[i] = strings.Repeat("─", w)
+	}
+	printPaddedRow(os.Stdout, sepRow, colWidths, ansiRe)
+	// Data
+	for _, row := range allRows[1:] {
+		printPaddedRow(os.Stdout, row, colWidths, ansiRe)
+	}
+}
+
+func printPaddedRow(w *os.File, row []string, widths []int, ansiRe *regexp.Regexp) {
+	for i, cell := range row {
+		visLen := len(ansiRe.ReplaceAllString(cell, ""))
+		pad := widths[i] - visLen
+		if pad < 0 {
+			pad = 0
+		}
+		if i > 0 {
+			fmt.Fprint(w, "  ")
+		}
+		fmt.Fprint(w, cell)
+		if i < len(row)-1 {
+			fmt.Fprint(w, strings.Repeat(" ", pad))
+		}
+	}
+	fmt.Fprintln(w)
 }
 
 func shortenError(err string) string {
