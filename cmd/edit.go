@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/naru-bot/upp/internal/db"
 	"github.com/naru-bot/upp/internal/trigger"
@@ -62,6 +63,9 @@ Examples:
 	cmd.Flags().Bool("clear-method", false, "Reset method to GET")
 	cmd.Flags().Bool("clear-body", false, "Clear request body")
 	cmd.Flags().Bool("clear-accept-status", false, "Reset to default status acceptance")
+	cmd.Flags().StringSlice("tag", nil, "Add tag(s) to the target")
+	cmd.Flags().StringSlice("untag", nil, "Remove tag(s) from the target")
+	cmd.Flags().Bool("clear-tags", false, "Remove all tags")
 
 	rootCmd.AddCommand(cmd)
 }
@@ -206,7 +210,22 @@ func runEdit(cmd *cobra.Command, args []string) {
 		changed = true
 	}
 
-	if !changed {
+	// Handle tags (these don't use the changed flag since they're separate table)
+	tagsChanged := false
+	if tags, _ := cmd.Flags().GetStringSlice("tag"); len(tags) > 0 {
+		db.AddTags(target.ID, tags)
+		tagsChanged = true
+	}
+	if untags, _ := cmd.Flags().GetStringSlice("untag"); len(untags) > 0 {
+		db.RemoveTags(target.ID, untags)
+		tagsChanged = true
+	}
+	if v, _ := cmd.Flags().GetBool("clear-tags"); v {
+		db.ClearTags(target.ID)
+		tagsChanged = true
+	}
+
+	if !changed && !tagsChanged {
 		exitError("nothing to update — specify at least one flag (see upp edit --help)")
 	}
 
@@ -242,6 +261,9 @@ func runEdit(cmd *cobra.Command, args []string) {
 		}
 		if target.TriggerRule != "" {
 			fmt.Printf(" | Trigger: %s", trigger.Describe(target.TriggerRule))
+		}
+		if tags, _ := db.GetTags(target.ID); len(tags) > 0 {
+			fmt.Printf(" | Tags: %s", strings.Join(tags, ", "))
 		}
 		fmt.Println()
 	}

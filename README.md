@@ -26,6 +26,7 @@
   - [Conditional Triggers](#-conditional-triggers)
   - [JSON API Monitoring (jq)](#-json-api-monitoring-jq)
   - [Advanced HTTP Options](#-advanced-http-options)
+  - [Tags & Organization](#-tags--organization)
   - [Quick Ping Diagnostics](#-quick-ping-diagnostics)
   - [JSON Output for AI Agents](#-json-output-for-ai-agents)
   - [Notifications](#-notifications)
@@ -198,6 +199,28 @@ upp add https://api.example.com/graphql \
   --auth-bearer "token" \
   --jq '.data.status.healthy' \
   --trigger-if "not_contains:true"
+```
+
+---
+
+### 🏷 Tags & Organization
+
+Organize targets with tags. Filter by tag in the CLI and TUI.
+
+```bash
+# Tag targets when adding
+upp add https://example.com --tag production --tag web
+
+# Tag existing targets
+upp tag "My Site" production web
+upp untag "My Site" staging
+
+# Filter by tag
+upp list --tag production
+upp check --tag production
+upp list --tags              # show all tags with counts
+
+# TUI: press 't' to cycle tag filter, '/' to search
 ```
 
 ---

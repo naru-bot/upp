@@ -200,8 +200,16 @@ func InitWithPath(path string) error {
 		enabled INTEGER DEFAULT 1
 	);
 
+	CREATE TABLE IF NOT EXISTS target_tags (
+		target_id INTEGER NOT NULL,
+		tag TEXT NOT NULL,
+		PRIMARY KEY (target_id, tag),
+		FOREIGN KEY (target_id) REFERENCES targets(id) ON DELETE CASCADE
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_results_target ON check_results(target_id, checked_at);
 	CREATE INDEX IF NOT EXISTS idx_snapshots_target ON snapshots(target_id, created_at);
+	CREATE INDEX IF NOT EXISTS idx_target_tags ON target_tags(tag);
 	`
 	_, err = db.Exec(schema)
 	if err != nil {
@@ -539,4 +547,106 @@ func RemoveNotifyConfig(identifier string) error {
 		return fmt.Errorf("notification config not found: %s", identifier)
 	}
 	return nil
+}
+
+// Tag operations
+
+func AddTags(targetID int64, tags []string) error {
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		_, err := db.Exec("INSERT OR IGNORE INTO target_tags (target_id, tag) VALUES (?, ?)", targetID, tag)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func RemoveTags(targetID int64, tags []string) error {
+	for _, tag := range tags {
+		db.Exec("DELETE FROM target_tags WHERE target_id = ? AND tag = ?", targetID, strings.TrimSpace(tag))
+	}
+	return nil
+}
+
+func ClearTags(targetID int64) error {
+	_, err := db.Exec("DELETE FROM target_tags WHERE target_id = ?", targetID)
+	return err
+}
+
+func GetTags(targetID int64) ([]string, error) {
+	rows, err := db.Query("SELECT tag FROM target_tags WHERE target_id = ? ORDER BY tag", targetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var tags []string
+	for rows.Next() {
+		var tag string
+		rows.Scan(&tag)
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+func ListAllTags() ([]string, error) {
+	rows, err := db.Query("SELECT DISTINCT tag FROM target_tags ORDER BY tag")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var tags []string
+	for rows.Next() {
+		var tag string
+		rows.Scan(&tag)
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+// GetTagMap returns a map of targetID -> []tags for all targets.
+func GetTagMap() (map[int64][]string, error) {
+	rows, err := db.Query("SELECT target_id, tag FROM target_tags ORDER BY target_id, tag")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	m := make(map[int64][]string)
+	for rows.Next() {
+		var id int64
+		var tag string
+		rows.Scan(&id, &tag)
+		m[id] = append(m[id], tag)
+	}
+	return m, nil
+}
+
+// ListTargetsByTag returns targets that have the specified tag.
+func ListTargetsByTag(tag string) ([]Target, error) {
+	rows, err := db.Query(
+		`SELECT t.id, t.name, t.url, t.type, t.interval_seconds, t.selector, t.headers, t.expect, t.timeout, t.retries, t.threshold, t.trigger_rule, t.jq_filter, t.method, t.body, t.no_follow, t.accept_status, t.insecure, t.created_at, t.paused
+		FROM targets t INNER JOIN target_tags tt ON t.id = tt.target_id
+		WHERE tt.tag = ? ORDER BY t.id`, tag,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var targets []Target
+	for rows.Next() {
+		var t Target
+		var paused, noFollow, insecure int
+		err := rows.Scan(&t.ID, &t.Name, &t.URL, &t.Type, &t.Interval, &t.Selector, &t.Headers, &t.Expect, &t.Timeout, &t.Retries, &t.Threshold, &t.TriggerRule, &t.JQFilter, &t.Method, &t.Body, &noFollow, &t.AcceptStatus, &insecure, &t.CreatedAt, &paused)
+		if err != nil {
+			return nil, err
+		}
+		t.Paused = paused == 1
+		t.NoFollow = noFollow == 1
+		t.Insecure = insecure == 1
+		targets = append(targets, t)
+	}
+	return targets, nil
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/naru-bot/upp/internal/db"
 	"github.com/naru-bot/upp/internal/trigger"
@@ -58,6 +59,7 @@ Examples:
 	cmd.Flags().Bool("no-follow", false, "Don't follow redirects")
 	cmd.Flags().String("accept-status", "", "Accepted HTTP status codes (e.g. '200-299,301,404')")
 	cmd.Flags().Bool("insecure", false, "Skip TLS certificate verification")
+	cmd.Flags().StringSlice("tag", nil, "Tag(s) for organizing targets (repeatable or comma-separated)")
 
 	rootCmd.AddCommand(cmd)
 }
@@ -112,6 +114,12 @@ func runAdd(cmd *cobra.Command, args []string) {
 		exitError(err.Error())
 	}
 
+	// Save tags
+	tags, _ := cmd.Flags().GetStringSlice("tag")
+	if len(tags) > 0 {
+		db.AddTags(target.ID, tags)
+	}
+
 	if jsonOutput {
 		printJSON(target)
 	} else {
@@ -146,6 +154,9 @@ func runAdd(cmd *cobra.Command, args []string) {
 		}
 		if target.TriggerRule != "" {
 			fmt.Printf(" | Trigger: %s", trigger.Describe(target.TriggerRule))
+		}
+		if len(tags) > 0 {
+			fmt.Printf(" | Tags: %s", strings.Join(tags, ", "))
 		}
 		fmt.Println()
 	}

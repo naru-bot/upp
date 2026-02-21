@@ -186,6 +186,7 @@ type checkDoneMsg struct {
 type tuiModel struct {
 	table      table.Model
 	targets    []db.Target
+	filtered   []db.Target // filtered view of targets
 	results    map[int64]*checker.Result
 	checkingIDs map[int64]bool
 	view       view
@@ -201,18 +202,26 @@ type tuiModel struct {
 	editFocus      int
 	snapshotData   string
 	snapshotScroll int
+	// Search/filter
+	searchInput textinput.Model
+	searching   bool
+	searchQuery string
+	filterTag   string
+	tagMap      map[int64][]string
+	allTags     []string
 }
 
 func newTUIModel() tuiModel {
 	columns := []table.Column{
 		{Title: "ID", Width: 4},
 		{Title: "Name", Width: 20},
-		{Title: "URL", Width: 35},
+		{Title: "URL", Width: 30},
 		{Title: "Type", Width: 6},
+		{Title: "Tags", Width: 14},
 		{Title: "Status", Width: 12},
 		{Title: "Response", Width: 10},
 		{Title: "Uptime", Width: 8},
-		{Title: "Trend", Width: 12},
+		{Title: "Trend", Width: 10},
 	}
 
 	t := table.New(
@@ -233,12 +242,19 @@ func newTUIModel() tuiModel {
 		Bold(false)
 	t.SetStyles(s)
 
+	si := textinput.New()
+	si.Prompt = "🔍 "
+	si.Placeholder = "search..."
+	si.CharLimit = 64
+
 	return tuiModel{
-		table:   t,
+		table:       t,
 		results:     make(map[int64]*checker.Result),
 		checkingIDs: make(map[int64]bool),
-		help:    help.New(),
-		status:  "Loading...",
+		help:        help.New(),
+		status:      "Loading...",
+		searchInput: si,
+		tagMap:      make(map[int64][]string),
 	}
 }
 
@@ -409,16 +425,75 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Search mode
+		if m.searching {
+			switch msg.Type {
+			case tea.KeyEsc:
+				m.searching = false
+				m.searchInput.Blur()
+				m.searchQuery = ""
+				m.refreshData()
+				return m, nil
+			case tea.KeyEnter:
+				m.searching = false
+				m.searchInput.Blur()
+				m.searchQuery = m.searchInput.Value()
+				m.refreshData()
+				return m, nil
+			default:
+				var cmd tea.Cmd
+				m.searchInput, cmd = m.searchInput.Update(msg)
+				m.searchQuery = m.searchInput.Value()
+				m.refreshData()
+				return m, cmd
+			}
+		}
+
 		switch {
 		case key.Matches(msg, keys.Quit):
 			return m, tea.Quit
 		case key.Matches(msg, keys.Help):
 			m.showHelp = !m.showHelp
 			return m, nil
+		case msg.String() == "/":
+			m.searching = true
+			m.searchInput.SetValue("")
+			m.searchInput.Focus()
+			return m, nil
+		case msg.String() == "t":
+			// Cycle through tag filters
+			if len(m.allTags) > 0 {
+				if m.filterTag == "" {
+					m.filterTag = m.allTags[0]
+				} else {
+					found := false
+					for i, tag := range m.allTags {
+						if tag == m.filterTag {
+							if i+1 < len(m.allTags) {
+								m.filterTag = m.allTags[i+1]
+							} else {
+								m.filterTag = "" // cycle back to "all"
+							}
+							found = true
+							break
+						}
+					}
+					if !found {
+						m.filterTag = ""
+					}
+				}
+				m.refreshData()
+				if m.filterTag != "" {
+					m.status = fmt.Sprintf("Filter: tag=%s (%d targets) | t: next tag", m.filterTag, len(m.filtered))
+				} else {
+					m.status = fmt.Sprintf("Filter cleared | %d targets", len(m.filtered))
+				}
+			}
+			return m, nil
 		case key.Matches(msg, keys.Enter):
 			row := m.table.Cursor()
-			if row >= 0 && row < len(m.targets) {
-				m.selected = &m.targets[row]
+			if row >= 0 && row < len(m.filtered) {
+				m.selected = &m.filtered[row]
 				m.view = viewDetail
 				m.updateDetail()
 			}
@@ -429,8 +504,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "Checking all targets..."
 			m.checking = true
 			var cmds []tea.Cmd
-			for i := range m.targets {
-				cmds = append(cmds, m.runCheck(&m.targets[i]))
+			for i := range m.filtered {
+				cmds = append(cmds, m.runCheck(&m.filtered[i]))
 			}
 			return m, tea.Batch(cmds...)
 		case key.Matches(msg, keys.Delete):
@@ -448,7 +523,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		m.refreshData()
-		m.status = fmt.Sprintf("Last refresh: %s | %d targets", time.Now().Format("15:04:05"), len(m.targets))
+		m.status = fmt.Sprintf("Last refresh: %s | %d targets", time.Now().Format("15:04:05"), len(m.filtered))
 		return m, m.tick()
 
 	case checkDoneMsg:
@@ -471,7 +546,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.refreshData()
-		m.status = fmt.Sprintf("Checked | %d targets | %s", len(m.targets), time.Now().Format("15:04:05"))
+		m.status = fmt.Sprintf("Checked | %d targets | %s", len(m.filtered), time.Now().Format("15:04:05"))
 		if m.view == viewDetail && m.selected != nil && m.selected.ID == msg.targetID {
 			m.updateDetail()
 		}
@@ -488,9 +563,14 @@ func (m *tuiModel) refreshData() {
 		return
 	}
 	m.targets = targets
+	m.tagMap, _ = db.GetTagMap()
+	m.allTags, _ = db.ListAllTags()
+
+	// Apply filters
+	m.filtered = m.applyFilters(targets)
 
 	var rows []table.Row
-	for _, t := range targets {
+	for _, t := range m.filtered {
 		status := "—"
 		respTime := "—"
 		uptime := "—"
@@ -525,11 +605,17 @@ func (m *tuiModel) refreshData() {
 			status = "paused"
 		}
 
+		tagStr := ""
+		if tt, ok := m.tagMap[t.ID]; ok {
+			tagStr = strings.Join(tt, ",")
+		}
+
 		rows = append(rows, table.Row{
 			fmt.Sprintf("%d", t.ID),
 			t.Name,
-			truncate(t.URL, 35),
+			truncate(t.URL, 30),
 			t.Type,
+			truncate(tagStr, 14),
 			status,
 			respTime,
 			uptime,
@@ -537,6 +623,41 @@ func (m *tuiModel) refreshData() {
 		})
 	}
 	m.table.SetRows(rows)
+}
+
+func (m *tuiModel) applyFilters(targets []db.Target) []db.Target {
+	if m.searchQuery == "" && m.filterTag == "" {
+		return targets
+	}
+	var result []db.Target
+	query := strings.ToLower(m.searchQuery)
+	for _, t := range targets {
+		// Tag filter
+		if m.filterTag != "" {
+			tags := m.tagMap[t.ID]
+			found := false
+			for _, tag := range tags {
+				if tag == m.filterTag {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		// Search filter
+		if query != "" {
+			name := strings.ToLower(t.Name)
+			url := strings.ToLower(t.URL)
+			tagStr := strings.ToLower(strings.Join(m.tagMap[t.ID], " "))
+			if !strings.Contains(name, query) && !strings.Contains(url, query) && !strings.Contains(tagStr, query) && !strings.Contains(t.Type, query) {
+				continue
+			}
+		}
+		result = append(result, t)
+	}
+	return result
 }
 
 func (m *tuiModel) updateDetail() {
@@ -561,6 +682,9 @@ func (m *tuiModel) updateDetail() {
 	}
 	if t.TriggerRule != "" {
 		sb.WriteString(fmt.Sprintf("Trigger:  %s\n", trigger.Describe(t.TriggerRule)))
+	}
+	if tags, ok := m.tagMap[t.ID]; ok && len(tags) > 0 {
+		sb.WriteString(fmt.Sprintf("Tags:     %s\n", strings.Join(tags, ", ")))
 	}
 	sb.WriteString(fmt.Sprintf("Timeout:  %ds | Retries: %d\n", t.Timeout, t.Retries))
 	sb.WriteString(fmt.Sprintf("Paused:   %v\n", t.Paused))
@@ -786,8 +910,8 @@ func (m *tuiModel) runCheck(t *db.Target) tea.Cmd {
 
 func (m *tuiModel) checkSelected() tea.Cmd {
 	row := m.table.Cursor()
-	if row >= 0 && row < len(m.targets) {
-		t := &m.targets[row]
+	if row >= 0 && row < len(m.filtered) {
+		t := &m.filtered[row]
 		m.status = fmt.Sprintf("Checking %s...", t.Name)
 		return m.runCheck(t)
 	}
@@ -796,8 +920,8 @@ func (m *tuiModel) checkSelected() tea.Cmd {
 
 func (m *tuiModel) deleteSelected() tea.Cmd {
 	row := m.table.Cursor()
-	if row >= 0 && row < len(m.targets) {
-		t := m.targets[row]
+	if row >= 0 && row < len(m.filtered) {
+		t := m.filtered[row]
 		db.RemoveTarget(fmt.Sprintf("%d", t.ID))
 		m.status = fmt.Sprintf("Deleted: %s", t.Name)
 		m.refreshData()
@@ -807,8 +931,8 @@ func (m *tuiModel) deleteSelected() tea.Cmd {
 
 func (m *tuiModel) togglePause() tea.Cmd {
 	row := m.table.Cursor()
-	if row >= 0 && row < len(m.targets) {
-		t := m.targets[row]
+	if row >= 0 && row < len(m.filtered) {
+		t := m.filtered[row]
 		db.SetPaused(fmt.Sprintf("%d", t.ID), !t.Paused)
 		action := "Paused"
 		if t.Paused {
@@ -901,7 +1025,25 @@ func (m tuiModel) View() string {
 		sb.WriteString("\n\n")
 		sb.WriteString(helpStyle.Render("↑↓: scroll • esc: back"))
 	} else {
-		// List view
+		// List view — filter indicators
+		if m.filterTag != "" || m.searchQuery != "" {
+			var filters []string
+			if m.filterTag != "" {
+				filters = append(filters, fmt.Sprintf("tag:%s", m.filterTag))
+			}
+			if m.searchQuery != "" {
+				filters = append(filters, fmt.Sprintf("search:%q", m.searchQuery))
+			}
+			filterBar := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFBF00")).Render(
+				fmt.Sprintf("⏳ Filter: %s (%d/%d targets)", strings.Join(filters, " + "), len(m.filtered), len(m.targets)))
+			sb.WriteString(filterBar + "\n")
+		}
+
+		// Search bar
+		if m.searching {
+			sb.WriteString(m.searchInput.View() + "\n")
+		}
+
 		sb.WriteString(m.table.View())
 		sb.WriteString("\n\n")
 
@@ -913,7 +1055,7 @@ func (m tuiModel) View() string {
 		if m.showHelp {
 			sb.WriteString("\n" + m.help.View(keys))
 		} else {
-			sb.WriteString(helpStyle.Render("\n ↑↓ navigate • enter details • c check • C check all • p pause • d delete • ? help • q quit"))
+			sb.WriteString(helpStyle.Render("\n ↑↓ navigate • enter details • / search • t filter tag • c check • C check all • a add • d delete • ? help • q quit"))
 		}
 	}
 

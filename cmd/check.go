@@ -13,19 +13,23 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(&cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "check [name|url|id]",
 		Short: "Run checks now (all targets or specific one)",
 		Long: `Run uptime and change detection checks immediately.
 
 Without arguments, checks all targets. With an argument, checks only the specified target.
+Use --tag to check only targets with a specific tag.
 
 Examples:
   upp check
   upp check "My Site"
-  upp check https://example.com`,
+  upp check https://example.com
+  upp check --tag my-sites`,
 		Run: runCheck,
-	})
+	}
+	cmd.Flags().String("tag", "", "Only check targets with this tag")
+	rootCmd.AddCommand(cmd)
 }
 
 type checkOutput struct {
@@ -44,12 +48,19 @@ type checkOutput struct {
 func runCheck(cmd *cobra.Command, args []string) {
 	var targets []db.Target
 
+	tag, _ := cmd.Flags().GetString("tag")
 	if len(args) > 0 {
 		t, err := db.GetTarget(args[0])
 		if err != nil {
 			exitError(err.Error())
 		}
 		targets = []db.Target{*t}
+	} else if tag != "" {
+		var err error
+		targets, err = db.ListTargetsByTag(tag)
+		if err != nil {
+			exitError(err.Error())
+		}
 	} else {
 		var err error
 		targets, err = db.ListTargets()
