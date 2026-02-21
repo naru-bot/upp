@@ -10,15 +10,15 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 35ms
 
 Sleep 500ms
-Type `watchdog notify add --name tg --type telegram --config '{"bot_token":"123:ABC","chat_id":"-100"}'`
+Type `upp notify add --name tg --type telegram --config '{"bot_token":"123:ABC","chat_id":"-100"}'`
 Enter
 Sleep 2.5s
 
-Type "watchdog notify list"
+Type "upp notify list"
 Enter
 Sleep 3s
 
-Type "watchdog notify remove tg"
+Type "upp notify remove tg"
 Enter
 Sleep 2s
 

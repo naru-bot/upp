@@ -10,11 +10,11 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog check"
+Type "upp check"
 Enter
 Sleep 3s
 
-Type "watchdog status"
+Type "upp status"
 Enter
 Sleep 4s
 

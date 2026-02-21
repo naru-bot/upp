@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -30,8 +30,8 @@ YAML format:
       type: tcp
 
 Examples:
-  watchdog import targets.yml
-  watchdog import targets.yml --json`,
+  upp import targets.yml
+  upp import targets.yml --json`,
 		Args: requireArgs(1),
 		Run:  runImport,
 	})

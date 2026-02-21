@@ -11,7 +11,7 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog tui"
+Type "upp tui"
 Enter
 Sleep 3s
 

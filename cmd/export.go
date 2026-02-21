@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -17,8 +17,8 @@ func init() {
 		Long: `Export all targets and their check history.
 
 Examples:
-  watchdog export --json > data.json
-  watchdog export --format csv > data.csv`,
+  upp export --json > data.json
+  upp export --format csv > data.csv`,
 		Run: runExport,
 	}
 	cmd.Flags().String("format", "json", "Export format: json, csv")
@@ -79,6 +79,6 @@ func runExport(cmd *cobra.Command, args []string) {
 
 	printJSON(data)
 	if !jsonOutput {
-		fmt.Fprintf(os.Stderr, "\nTip: Use 'watchdog export --json' to suppress this message\n")
+		fmt.Fprintf(os.Stderr, "\nTip: Use 'upp export --json' to suppress this message\n")
 	}
 }

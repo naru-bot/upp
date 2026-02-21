@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/checker"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -18,12 +18,12 @@ func init() {
 Useful for one-off diagnostics, scripting, and AI agent spot-checks.
 
 Examples:
-  watchdog ping https://example.com
-  watchdog ping https://example.com --selector "h1"
-  watchdog ping 192.168.1.1:3306 --type tcp
-  watchdog ping example.com --type dns
-  watchdog ping https://api.example.com --expect "ok"
-  watchdog ping https://example.com --count 5`,
+  upp ping https://example.com
+  upp ping https://example.com --selector "h1"
+  upp ping 192.168.1.1:3306 --type tcp
+  upp ping example.com --type dns
+  upp ping https://api.example.com --expect "ok"
+  upp ping https://example.com --count 5`,
 		Args: requireArgs(1),
 		Run:  runPing,
 	}

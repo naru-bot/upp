@@ -3,15 +3,15 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/naru-bot/watchdog/internal/config"
+	"github.com/naru-bot/upp/internal/config"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "init",
-		Short: "Initialize watchdog configuration",
-		Long: `Create a default configuration file at ~/.config/watchdog/config.yml.
+		Short: "Initialize upp configuration",
+		Long: `Create a default configuration file at ~/.config/upp/config.yml.
 
 The config file lets you set default intervals, timeouts, display preferences,
 and custom headers that apply to all targets.`,
@@ -21,9 +21,9 @@ and custom headers that apply to all targets.`,
 				exitError(err.Error())
 			}
 			if jsonOutput {
-				printJSON(map[string]string{"status": "initialized", "config": "~/.config/watchdog/config.yml"})
+				printJSON(map[string]string{"status": "initialized", "config": "~/.config/upp/config.yml"})
 			} else {
-				fmt.Println("✓ Configuration initialized at ~/.config/watchdog/config.yml")
+				fmt.Println("✓ Configuration initialized at ~/.config/upp/config.yml")
 				fmt.Println()
 				fmt.Println("Default settings:")
 				fmt.Printf("  Check interval: %ds\n", cfg.Defaults.Interval)

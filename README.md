@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐕 Watchdog
+# 🐕 Upp
 
 ![Watchdog Demo](assets/demo.gif)
 
@@ -17,7 +17,7 @@
 
 ## Table of Contents
 
-- [Why Watchdog?](#why-watchdog)
+- [Why Upp?](#why-upp)
 - [Quick Start](#quick-start)
 - [Features](#features)
   - [Interactive TUI Dashboard](#-interactive-tui-dashboard)
@@ -31,7 +31,7 @@
 - [Target Configuration Fields](#target-configuration-fields)
 - [Tutorial: Monitor Your First Website in 60 Seconds](#tutorial-monitor-your-first-website-in-60-seconds)
 - [AI Agent Integration](#ai-agent-integration)
-- [How Watchdog Is Different](#how-watchdog-is-different)
+- [How Upp Is Different](#how-upp-is-different)
 - [Installation](#installation)
 - [All Commands](#all-commands)
 - [Configuration](#configuration)
@@ -42,7 +42,7 @@
 
 ---
 
-## Why Watchdog?
+## Why Upp?
 
 You just want to know if your website is up. Maybe get alerted when a pricing page changes. Simple, right?
 
@@ -55,7 +55,7 @@ There are plenty of great monitoring tools out there — dashboards, status page
 
 For teams running production infrastructure with public status pages, these tools are the right choice. But if you just want to monitor a handful of sites from your terminal — or let an AI agent keep an eye on things — there should be a simpler way.
 
-**That's why Watchdog exists.**
+**That's why Upp exists.**
 
 One 17MB binary. Works from your terminal. Works over SSH. Works in cron jobs. Works with AI agents out of the box. Install it, add a URL, done. No containers, no web UIs, no port forwarding.
 
@@ -65,16 +65,16 @@ One 17MB binary. Works from your terminal. Works over SSH. Works in cron jobs. W
 
 ```bash
 # Install
-go install github.com/naru-bot/watchdog@latest
+go install github.com/naru-bot/upp@latest
 
 # Add a site
-watchdog add https://example.com --name "My Site"
+upp add https://example.com --name "My Site"
 
 # Check it
-watchdog check
+upp check
 
 # See results
-watchdog status
+upp status
 ```
 
 That's it. You're monitoring a website.
@@ -88,7 +88,7 @@ That's it. You're monitoring a website.
 Full terminal UI with keyboard navigation. Browse targets, view stats, trigger checks — all without leaving your terminal. Works beautifully over SSH.
 
 ```bash
-watchdog tui
+upp tui
 ```
 
 ![TUI Dashboard](assets/tui.gif)
@@ -102,8 +102,8 @@ Navigate with `↑↓`/`jk`, `Enter` for details, `c` to check, `p` to pause, `d
 Track HTTP status codes, response times, availability percentage, and SSL certificate expiry. Response time trends are visualized as sparkline charts right in your terminal.
 
 ```bash
-watchdog status --period 7d
-watchdog watch --refresh 10    # Live auto-refreshing dashboard
+upp status --period 7d
+upp watch --refresh 10    # Live auto-refreshing dashboard
 ```
 
 ![Uptime Monitoring](assets/uptime.gif)
@@ -115,9 +115,9 @@ watchdog watch --refresh 10    # Live auto-refreshing dashboard
 Monitor pages for content changes. Target specific elements with CSS selectors. View colored unified diffs of what changed.
 
 ```bash
-watchdog add https://example.com/pricing --name "Pricing" --selector "div.price"
-watchdog check "Pricing"
-watchdog diff "Pricing"
+upp add https://example.com/pricing --name "Pricing" --selector "div.price"
+upp check "Pricing"
+upp diff "Pricing"
 ```
 
 ![Change Detection](assets/change-detection.gif)
@@ -129,7 +129,7 @@ watchdog diff "Pricing"
 One-off checks without saving anything to the database. Perfect for quick debugging.
 
 ```bash
-watchdog ping https://api.example.com/health
+upp ping https://api.example.com/health
 ```
 
 ![Ping Diagnostics](assets/ping.gif)
@@ -138,10 +138,10 @@ watchdog ping https://api.example.com/health
 
 ### 🤖 JSON Output for AI Agents
 
-Every single command supports `--json`. Consistent, structured output that's trivial to parse. This is what makes Watchdog different from every GUI-based monitor.
+Every single command supports `--json`. Consistent, structured output that's trivial to parse. This is what makes Upp different from every GUI-based monitor.
 
 ```bash
-watchdog check --json | jq '.[] | select(.status == "down")'
+upp check --json | jq '.[] | select(.status == "down")'
 ```
 
 ```json
@@ -168,24 +168,24 @@ Get alerted on Telegram, Discord, Slack, webhooks, or custom shell commands when
 
 ```bash
 # Telegram
-watchdog notify add --name tg --type telegram \
+upp notify add --name tg --type telegram \
   --config '{"bot_token":"123:ABC","chat_id":"-100123"}'
 
 # Discord
-watchdog notify add --name discord --type discord \
+upp notify add --name discord --type discord \
   --config '{"webhook_url":"https://discord.com/api/webhooks/..."}'
 
 # Webhook (Slack, etc.)
-watchdog notify add --name alerts --type webhook \
+upp notify add --name alerts --type webhook \
   --config '{"url":"https://hooks.slack.com/services/..."}'
 
 # Custom shell command
-watchdog notify add --name logger --type command \
-  --config '{"command":"echo \"{target} is {status}\" >> /var/log/watchdog.log"}'
+upp notify add --name logger --type command \
+  --config '{"command":"echo \"{target} is {status}\" >> /var/log/upp.log"}'
 
 # Manage
-watchdog notify list
-watchdog notify remove alerts
+upp notify list
+upp notify remove alerts
 ```
 
 ![Notifications](assets/notifications.gif)
@@ -194,11 +194,11 @@ watchdog notify remove alerts
 
 ### 👻 Daemon Mode
 
-Run Watchdog as a background service. Checks run on schedule, notifications fire automatically.
+Run Upp as a background service. Checks run on schedule, notifications fire automatically.
 
 ```bash
-watchdog daemon                      # Foreground
-nohup watchdog daemon &              # Background
+upp daemon                      # Foreground
+nohup upp daemon &              # Background
 ```
 
 
@@ -209,7 +209,7 @@ See [Systemd Service](#systemd-service) for production setup.
 
 ## Check Types
 
-Watchdog supports multiple monitoring approaches for different use cases:
+Upp supports multiple monitoring approaches for different use cases:
 
 ### HTTP (default)
 - Monitors HTTP/HTTPS endpoints
@@ -218,31 +218,31 @@ Watchdog supports multiple monitoring approaches for different use cases:
 - Supports expected keyword matching
 - Examples:
   ```bash
-  watchdog add https://example.com --name "My Site"
-  watchdog add https://example.com/pricing --selector "div.price" --name "Pricing"
-  watchdog add https://api.example.com/health --expect "ok" --name "API Health"
+  upp add https://example.com --name "My Site"
+  upp add https://example.com/pricing --selector "div.price" --name "Pricing"
+  upp add https://api.example.com/health --expect "ok" --name "API Health"
   ```
 
 ### TCP
 - Tests TCP port connectivity
-- Example: `watchdog add example.com:3306 --type tcp --name "MySQL"`
+- Example: `upp add example.com:3306 --type tcp --name "MySQL"`
 
 ### Ping
 - ICMP-style connectivity check
-- Example: `watchdog add example.com --type ping --name "Server Ping"`
+- Example: `upp add example.com --type ping --name "Server Ping"`
 
 ### DNS
 - DNS resolution check
-- Example: `watchdog add example.com --type dns --name "DNS Check"`
+- Example: `upp add example.com --type dns --name "DNS Check"`
 
 ### Visual (screenshot diff)
 - Takes screenshots via headless browser and compares pixel-by-pixel
 - Configurable threshold percentage (default 5%)
-- Requires a headless browser (run `watchdog doctor` to check)
+- Requires a headless browser (run `upp doctor` to check)
 - Examples:
   ```bash
-  watchdog add https://example.com --type visual --name "Homepage Visual"
-  watchdog add https://example.com --type visual --threshold 10.0 --name "Loose Visual"
+  upp add https://example.com --type visual --name "Homepage Visual"
+  upp add https://example.com --type visual --threshold 10.0 --name "Loose Visual"
   ```
 
 ### WHOIS (domain monitoring)
@@ -251,7 +251,7 @@ Watchdog supports multiple monitoring approaches for different use cases:
 - Domain is extracted from URL automatically
 - Example:
   ```bash
-  watchdog add https://example.com --type whois --name "Domain WHOIS"
+  upp add https://example.com --type whois --name "Domain WHOIS"
   ```
 
 ---
@@ -276,22 +276,22 @@ When using the TUI add/edit screen, these fields control how your targets are mo
 
 ## Tutorial: Monitor Your First Website in 60 Seconds
 
-**Step 1** — Install Watchdog:
+**Step 1** — Install Upp:
 
 ```bash
-go install github.com/naru-bot/watchdog@latest
+go install github.com/naru-bot/upp@latest
 ```
 
 **Step 2** — Add a website to monitor:
 
 ```bash
-watchdog add https://yoursite.com --name "My App"
+upp add https://yoursite.com --name "My App"
 ```
 
 **Step 3** — Run your first check:
 
 ```bash
-watchdog check "My App"
+upp check "My App"
 ```
 
 You'll see status code, response time, SSL days remaining, and whether content changed.
@@ -299,14 +299,14 @@ You'll see status code, response time, SSL days remaining, and whether content c
 **Step 4** — Set up a notification so you know when it goes down:
 
 ```bash
-watchdog notify add --name tg --type telegram \
+upp notify add --name tg --type telegram \
   --config '{"bot_token":"YOUR_BOT_TOKEN","chat_id":"YOUR_CHAT_ID"}'
 ```
 
 **Step 5** — Start the daemon for continuous monitoring:
 
 ```bash
-watchdog daemon
+upp daemon
 ```
 
 Done. You're monitoring a website with notifications. No Docker, no browser, no account signups.
@@ -314,29 +314,29 @@ Done. You're monitoring a website with notifications. No Docker, no browser, no 
 **Bonus** — Launch the TUI for a beautiful overview:
 
 ```bash
-watchdog tui
+upp tui
 ```
 
 ---
 
 ## AI Agent Integration
 
-This is Watchdog's superpower. Every command speaks JSON natively. No API servers, no authentication tokens, no SDK. Just pipe and parse.
+This is Upp's superpower. Every command speaks JSON natively. No API servers, no authentication tokens, no SDK. Just pipe and parse.
 
 ### Use with AI coding agents
 
 ```bash
 # "Are any of my sites down?"
-watchdog check --json | jq '.[] | select(.status == "down")'
+upp check --json | jq '.[] | select(.status == "down")'
 
 # "Which sites have low uptime?"
-watchdog status --json | jq '.[] | select(.uptime_percent < 99)'
+upp status --json | jq '.[] | select(.uptime_percent < 99)'
 
 # "Did anything change?"
-watchdog check --json | jq '.[] | select(.changed == true)'
+upp check --json | jq '.[] | select(.changed == true)'
 
 # "Show me the diff"
-watchdog diff "Pricing Page" --json
+upp diff "Pricing Page" --json
 ```
 
 ### JSON conventions
@@ -350,15 +350,15 @@ watchdog diff "Pricing Page" --json
 
 ```bash
 # Check every 5 minutes, email on failures
-*/5 * * * * watchdog check --json | jq -e '.[] | select(.status == "down")' && \
+*/5 * * * * upp check --json | jq -e '.[] | select(.status == "down")' && \
   echo "ALERT" | mail -s "Site down" admin@example.com
 ```
 
 ---
 
-## How Watchdog Is Different
+## How Upp Is Different
 
-| | Typical web-based monitors | **Watchdog** |
+| | Typical web-based monitors | **Upp** |
 |---|---|---|
 | Install | Docker / server setup | **Single binary, zero dependencies** |
 | Interface | Web browser required | **Terminal / TUI / JSON** |
@@ -376,7 +376,7 @@ watchdog diff "Pricing Page" --json
 ### Go install (recommended)
 
 ```bash
-go install github.com/naru-bot/watchdog@latest
+go install github.com/naru-bot/upp@latest
 ```
 
 Requires Go 1.24+.
@@ -388,8 +388,8 @@ Requires Go 1.24+.
 
 ```bash
 curl -LO https://github.com/naru-bot/watchdog/releases/latest/download/watchdog_darwin_arm64.tar.gz
-tar xzf watchdog_darwin_arm64.tar.gz
-sudo mv watchdog /usr/local/bin/
+tar xzf upp_darwin_arm64.tar.gz
+sudo mv upp /usr/local/bin/
 ```
 </details>
 
@@ -398,8 +398,8 @@ sudo mv watchdog /usr/local/bin/
 
 ```bash
 curl -LO https://github.com/naru-bot/watchdog/releases/latest/download/watchdog_darwin_amd64.tar.gz
-tar xzf watchdog_darwin_amd64.tar.gz
-sudo mv watchdog /usr/local/bin/
+tar xzf upp_darwin_amd64.tar.gz
+sudo mv upp /usr/local/bin/
 ```
 </details>
 
@@ -408,8 +408,8 @@ sudo mv watchdog /usr/local/bin/
 
 ```bash
 curl -LO https://github.com/naru-bot/watchdog/releases/latest/download/watchdog_linux_amd64.tar.gz
-tar xzf watchdog_linux_amd64.tar.gz
-sudo mv watchdog /usr/local/bin/
+tar xzf upp_linux_amd64.tar.gz
+sudo mv upp /usr/local/bin/
 ```
 </details>
 
@@ -418,8 +418,8 @@ sudo mv watchdog /usr/local/bin/
 
 ```bash
 curl -LO https://github.com/naru-bot/watchdog/releases/latest/download/watchdog_linux_arm64.tar.gz
-tar xzf watchdog_linux_arm64.tar.gz
-sudo mv watchdog /usr/local/bin/
+tar xzf upp_linux_arm64.tar.gz
+sudo mv upp /usr/local/bin/
 ```
 </details>
 
@@ -427,16 +427,16 @@ sudo mv watchdog /usr/local/bin/
 
 ```bash
 git clone https://github.com/naru-bot/watchdog.git
-cd watchdog
+cd upp
 make build
-sudo mv watchdog /usr/local/bin/
+sudo mv upp /usr/local/bin/
 ```
 
 ### Cross-compilation
 
 ```bash
 make cross
-# Produces: watchdog-darwin-arm64, watchdog-darwin-amd64, watchdog-linux-amd64, watchdog-linux-arm64
+# Produces: upp-darwin-arm64, upp-darwin-amd64, upp-linux-amd64, upp-linux-arm64
 ```
 
 ---
@@ -478,7 +478,7 @@ make cross
 ### Add command flags
 
 ```bash
-watchdog add <url> [flags]
+upp add <url> [flags]
   --name         Target name (auto-generated from URL if omitted)
   --type         Check type: http, tcp, ping, dns, visual, whois (default: http)
   --interval     Check interval in seconds (default: 300)
@@ -494,7 +494,7 @@ watchdog add <url> [flags]
 ## Configuration
 
 ```bash
-watchdog init    # Creates ~/.config/watchdog/config.yml
+upp init    # Creates ~/.config/upp/config.yml
 ```
 
 ```yaml
@@ -503,7 +503,7 @@ defaults:
   type: http           # Default check type
   timeout: 30          # HTTP timeout (seconds)
   retry_count: 1       # Retries before marking down
-  user_agent: watchdog/1.0
+  user_agent: upp/1.0
 
 display:
   color: true
@@ -513,25 +513,25 @@ display:
 
 ### Data storage
 
-All data lives in `~/.watchdog/watchdog.db` (SQLite). Back up by copying the file, query with any SQLite client, or export via `watchdog export`.
+All data lives in `~/.upp/upp.db` (SQLite). Back up by copying the file, query with any SQLite client, or export via `upp export`.
 
 ---
 
 ## Running as a Background Service
 
-To run Watchdog in the background and survive reboots, set it up as a systemd service.
+To run Upp in the background and survive reboots, set it up as a systemd service.
 
 **One-liner setup:**
 
 ```bash
-sudo tee /etc/systemd/system/watchdog-monitor.service << 'EOF'
+sudo tee /etc/systemd/system/upp-monitor.service << 'EOF'
 [Unit]
-Description=Watchdog Website Monitor
+Description=Upp Website Monitor
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/watchdog daemon
+ExecStart=/usr/local/bin/upp daemon
 Restart=always
 RestartSec=5
 
@@ -539,58 +539,58 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-sudo systemctl enable --now watchdog-monitor
+sudo systemctl enable --now upp-monitor
 ```
 
 **Check status:**
 
 ```bash
-sudo systemctl status watchdog-monitor
+sudo systemctl status upp-monitor
 ```
 
 **View logs:**
 
 ```bash
-journalctl -u watchdog-monitor -f
+journalctl -u upp-monitor -f
 ```
 
 **Stop / restart:**
 
 ```bash
-sudo systemctl stop watchdog-monitor
-sudo systemctl restart watchdog-monitor
+sudo systemctl stop upp-monitor
+sudo systemctl restart upp-monitor
 ```
 
 ### Removing the Service
 
 ```bash
-sudo systemctl stop watchdog-monitor
-sudo systemctl disable watchdog-monitor
-sudo rm /etc/systemd/system/watchdog-monitor.service
+sudo systemctl stop upp-monitor
+sudo systemctl disable upp-monitor
+sudo rm /etc/systemd/system/upp-monitor.service
 sudo systemctl daemon-reload
 ```
 
 ---
 
-## Uninstalling Watchdog
+## Uninstalling Upp
 
-To completely remove Watchdog from your system:
+To completely remove Upp from your system:
 
 ```bash
 # 1. Stop and remove the service (if running)
-sudo systemctl stop watchdog-monitor
-sudo systemctl disable watchdog-monitor
-sudo rm /etc/systemd/system/watchdog-monitor.service
+sudo systemctl stop upp-monitor
+sudo systemctl disable upp-monitor
+sudo rm /etc/systemd/system/upp-monitor.service
 sudo systemctl daemon-reload
 
 # 2. Remove the binary
-sudo rm /usr/local/bin/watchdog
+sudo rm /usr/local/bin/upp
 # Or if installed via go install:
-rm $(go env GOPATH)/bin/watchdog
+rm $(go env GOPATH)/bin/upp
 
 # 3. Remove data and config
-rm -rf ~/.watchdog
-rm -rf ~/.config/watchdog
+rm -rf ~/.upp
+rm -rf ~/.config/upp
 ```
 
 ---
@@ -613,7 +613,7 @@ Contributions welcome! Open an issue or PR on [GitHub](https://github.com/naru-b
 
 ```bash
 git clone https://github.com/naru-bot/watchdog.git
-cd watchdog
+cd upp
 make build
 # hack away
 ```

@@ -10,15 +10,15 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog add https://example.com --name 'My Site'"
+Type "upp add https://example.com --name 'My Site'"
 Enter
 Sleep 2.5s
 
-Type "watchdog check"
+Type "upp check"
 Enter
 Sleep 3s
 
-Type "watchdog status"
+Type "upp status"
 Enter
 Sleep 4s
 

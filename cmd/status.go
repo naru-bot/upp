@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -20,9 +20,9 @@ func init() {
 Without arguments, shows summary for all targets.
 
 Examples:
-  watchdog status
-  watchdog status "My Site"
-  watchdog status --period 7d`,
+  upp status
+  upp status "My Site"
+  upp status --period 7d`,
 		Run: runStatus,
 	}
 	cmd.Flags().StringP("period", "p", "24h", "Stats period: 1h, 24h, 7d, 30d")

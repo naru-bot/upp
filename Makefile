@@ -1,6 +1,6 @@
-BINARY_NAME=watchdog
+BINARY_NAME=upp
 VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS=-ldflags "-X github.com/cheryeong/watchdog/cmd.Version=$(VERSION)"
+LDFLAGS=-ldflags "-X github.com/naru-bot/upp/cmd.Version=$(VERSION)"
 
 .PHONY: build clean test install cross
 
@@ -14,7 +14,7 @@ test:
 	go test ./...
 
 clean:
-	rm -f $(BINARY_NAME) watchdog-*
+	rm -f $(BINARY_NAME) upp-*
 
 # Cross-compile for all platforms
 cross:

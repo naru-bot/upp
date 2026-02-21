@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/checker"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +22,8 @@ func init() {
 Refreshes at the configured interval. Press Ctrl+C to stop.
 
 Examples:
-  watchdog watch
-  watchdog watch --refresh 10`,
+  upp watch
+  upp watch --refresh 10`,
 		Run: runWatch,
 	}
 	cmd.Flags().IntP("refresh", "r", 30, "Refresh interval in seconds")
@@ -36,7 +36,7 @@ func runWatch(cmd *cobra.Command, args []string) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	fmt.Printf("🐕 Watchdog live dashboard (refresh: %ds) — Ctrl+C to stop\n\n", refresh)
+	fmt.Printf("🐕 Upp live dashboard (refresh: %ds) — Ctrl+C to stop\n\n", refresh)
 
 	ticker := time.NewTicker(time.Duration(refresh) * time.Second)
 	defer ticker.Stop()
@@ -68,10 +68,10 @@ func renderDashboard() {
 	}
 
 	now := time.Now()
-	fmt.Printf("%s  %s\n\n", colorBold("🐕 Watchdog"), colorCyan(now.Format("2006-01-02 15:04:05")))
+	fmt.Printf("%s  %s\n\n", colorBold("🐕 Upp"), colorCyan(now.Format("2006-01-02 15:04:05")))
 
 	if len(targets) == 0 {
-		fmt.Println("No targets configured. Use 'watchdog add <url>' to start.")
+		fmt.Println("No targets configured. Use 'upp add <url>' to start.")
 		return
 	}
 

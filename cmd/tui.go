@@ -12,8 +12,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/naru-bot/watchdog/internal/checker"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -785,7 +785,7 @@ func (m tuiModel) View() string {
 	var sb strings.Builder
 
 	// Title bar
-	title := titleStyle.Render(" 🐕 Watchdog ")
+	title := titleStyle.Render(" 🐕 Upp ")
 	sb.WriteString(title + "\n\n")
 
 	if m.view == viewAdd || (m.view == viewEdit && m.selected != nil) {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -22,10 +22,10 @@ func init() {
 		Long: `Add a notification channel for alerts.
 
 Examples:
-  watchdog notify add --name alerts --type webhook --config '{"url":"https://hooks.slack.com/..."}'
-  watchdog notify add --name telegram --type telegram --config '{"bot_token":"...","chat_id":"..."}'
-  watchdog notify add --name discord --type discord --config '{"webhook_url":"..."}'
-  watchdog notify add --name runner --type command --config '{"command":"echo {target} is {status}"}'`,
+  upp notify add --name alerts --type webhook --config '{"url":"https://hooks.slack.com/..."}'
+  upp notify add --name telegram --type telegram --config '{"bot_token":"...","chat_id":"..."}'
+  upp notify add --name discord --type discord --config '{"webhook_url":"..."}'
+  upp notify add --name runner --type command --config '{"command":"echo {target} is {status}"}'`,
 		Run: runNotifyAdd,
 	}
 	addCmd.Flags().String("name", "", "Name for this notification channel")

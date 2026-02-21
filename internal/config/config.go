@@ -37,7 +37,7 @@ func Default() *Config {
 			Type:       "http",
 			Timeout:    30,
 			RetryCount: 1,
-			UserAgent:  "watchdog/1.0",
+			UserAgent:  "upp/1.0",
 		},
 		Display: Display{
 			Color:   true,
@@ -49,10 +49,31 @@ func Default() *Config {
 
 func configPath() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "watchdog", "config.yml")
+		newDir := filepath.Join(xdg, "upp")
+		oldDir := filepath.Join(xdg, "watchdog")
+		
+		// Migrate from old config directory if needed
+		if _, err := os.Stat(newDir); os.IsNotExist(err) {
+			if _, err := os.Stat(oldDir); err == nil {
+				os.Rename(oldDir, newDir)
+			}
+		}
+		
+		return filepath.Join(newDir, "config.yml")
 	}
+	
 	home := getHomeDir()
-	return filepath.Join(home, ".config", "watchdog", "config.yml")
+	newDir := filepath.Join(home, ".config", "upp")
+	oldDir := filepath.Join(home, ".config", "watchdog")
+	
+	// Migrate from old config directory if needed
+	if _, err := os.Stat(newDir); os.IsNotExist(err) {
+		if _, err := os.Stat(oldDir); err == nil {
+			os.Rename(oldDir, newDir)
+		}
+	}
+	
+	return filepath.Join(newDir, "config.yml")
 }
 
 // getHomeDir returns the current user's home directory reliably,

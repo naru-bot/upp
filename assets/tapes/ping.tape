@@ -10,11 +10,11 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog ping https://example.com"
+Type "upp ping https://example.com"
 Enter
 Sleep 3s
 
-Type "watchdog ping https://httpbin.org/get"
+Type "upp ping https://httpbin.org/get"
 Enter
 Sleep 3s
 

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/checker"
-	"github.com/naru-bot/watchdog/internal/db"
-	"github.com/naru-bot/watchdog/internal/notify"
+	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/db"
+	"github.com/naru-bot/upp/internal/notify"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +19,9 @@ func init() {
 Without arguments, checks all targets. With an argument, checks only the specified target.
 
 Examples:
-  watchdog check
-  watchdog check "My Site"
-  watchdog check https://example.com`,
+  upp check
+  upp check "My Site"
+  upp check https://example.com`,
 		Run: runCheck,
 	})
 }
@@ -59,7 +59,7 @@ func runCheck(cmd *cobra.Command, args []string) {
 		if jsonOutput {
 			printJSON([]interface{}{})
 		} else {
-			fmt.Println("No targets to check. Use 'watchdog add <url>' first.")
+			fmt.Println("No targets to check. Use 'upp add <url>' first.")
 		}
 		return
 	}
@@ -154,7 +154,7 @@ func sendNotifications(target, url, status, errMsg string) {
 		return
 	}
 
-	msg := fmt.Sprintf("[watchdog] %s (%s) is %s", target, url, status)
+	msg := fmt.Sprintf("[upp] %s (%s) is %s", target, url, status)
 	if errMsg != "" {
 		msg += ": " + errMsg
 	}

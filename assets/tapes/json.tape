@@ -10,11 +10,11 @@ Set Theme "Catppuccin Mocha"
 Set TypingSpeed 40ms
 
 Sleep 500ms
-Type "watchdog check --json | jq ."
+Type "upp check --json | jq ."
 Enter
 Sleep 4s
 
-Type "watchdog status --json | jq '.[].uptime_percent'"
+Type "upp status --json | jq '.[].uptime_percent'"
 Enter
 Sleep 3s
 

@@ -6,8 +6,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/naru-bot/watchdog/internal/config"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/config"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +19,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "watchdog",
+	Use:   "upp",
 	Short: "Website uptime monitoring & change detection CLI",
-	Long: `Watchdog — A Swiss Army knife for website monitoring.
+	Long: `Upp — A Swiss Army knife for website monitoring.
 
 Combines uptime monitoring (like Uptime Kuma) and change detection
 (like changedetection.io) in a single, lightweight CLI tool.
@@ -29,11 +29,11 @@ Combines uptime monitoring (like Uptime Kuma) and change detection
 Designed for both humans and AI agents. Use --json for structured output.
 
 Getting started:
-  watchdog add https://example.com --name "My Site"
-  watchdog check
-  watchdog status
+  upp add https://example.com --name "My Site"
+  upp check
+  upp status
 
-Documentation: https://github.com/naru-bot/watchdog`,
+Documentation: https://github.com/naru-bot/upp`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip DB init for commands that don't need it
 		switch cmd.Name() {
@@ -126,7 +126,7 @@ func init() {
 			if jsonOutput {
 				printJSON(map[string]string{"version": Version, "platform": fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)})
 			} else {
-				fmt.Printf("watchdog %s (%s/%s)\n", Version, runtime.GOOS, runtime.GOARCH)
+				fmt.Printf("upp %s (%s/%s)\n", Version, runtime.GOOS, runtime.GOARCH)
 			}
 		},
 	})
@@ -135,30 +135,30 @@ func init() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "completion [bash|zsh|fish|powershell]",
 		Short: "Generate shell completion scripts",
-		Long: `Generate shell completion scripts for watchdog.
+		Long: `Generate shell completion scripts for upp.
 
 To load completions:
 
 Bash:
-  $ source <(watchdog completion bash)
+  $ source <(upp completion bash)
   # To load completions for each session, execute once:
   # Linux:
-  $ watchdog completion bash > /etc/bash_completion.d/watchdog
+  $ upp completion bash > /etc/bash_completion.d/upp
   # macOS:
-  $ watchdog completion bash > $(brew --prefix)/etc/bash_completion.d/watchdog
+  $ upp completion bash > $(brew --prefix)/etc/bash_completion.d/upp
 
 Zsh:
-  $ source <(watchdog completion zsh)
+  $ source <(upp completion zsh)
   # To load completions for each session, execute once:
-  $ watchdog completion zsh > "${fpath[1]}/_watchdog"
+  $ upp completion zsh > "${fpath[1]}/_upp"
 
 Fish:
-  $ watchdog completion fish | source
+  $ upp completion fish | source
   # To load completions for each session, execute once:
-  $ watchdog completion fish > ~/.config/fish/completions/watchdog.fish
+  $ upp completion fish > ~/.config/fish/completions/upp.fish
 
 PowerShell:
-  PS> watchdog completion powershell | Out-String | Invoke-Expression`,
+  PS> upp completion powershell | Out-String | Invoke-Expression`,
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),

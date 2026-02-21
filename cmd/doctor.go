@@ -12,14 +12,14 @@ import (
 func init() {
 	cmd := &cobra.Command{
 		Use:   "doctor",
-		Short: "Check system dependencies for Watchdog features",
-		Long: `Check system for dependencies needed by Watchdog features and reports status with install instructions.
+		Short: "Check system dependencies for Upp features",
+		Long: `Check system for dependencies needed by Upp features and reports status with install instructions.
 
 This command verifies that required tools are available for advanced features:
 - Headless browser (required for visual checks)
 
 Examples:
-  watchdog doctor`,
+  upp doctor`,
 		Run: runDoctor,
 	}
 	rootCmd.AddCommand(cmd)
@@ -41,7 +41,7 @@ type doctorOutput struct {
 
 func runDoctor(cmd *cobra.Command, args []string) {
 	if !jsonOutput && !quiet {
-		fmt.Println("🔍 Watchdog Doctor")
+		fmt.Println("🔍 Upp Doctor")
 		fmt.Println()
 		fmt.Println("Checking dependencies...")
 		fmt.Println()

@@ -5,7 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ func runHistory(cmd *cobra.Command, args []string) {
 	}
 
 	if len(results) == 0 {
-		fmt.Println("No check history. Run 'watchdog check' first.")
+		fmt.Println("No check history. Run 'upp check' first.")
 		return
 	}
 

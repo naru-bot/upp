@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/checker"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/checker"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -16,19 +16,19 @@ func init() {
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "daemon",
 		Short: "Run as background daemon with scheduled checks",
-		Long: `Start watchdog as a long-running process that checks all targets
+		Long: `Start upp as a long-running process that checks all targets
 on their configured intervals.
 
 Examples:
-  watchdog daemon
-  watchdog daemon &           # run in background
-  nohup watchdog daemon &     # survive terminal close`,
+  upp daemon
+  upp daemon &           # run in background
+  nohup upp daemon &     # survive terminal close`,
 		Run: runDaemon,
 	})
 }
 
 func runDaemon(cmd *cobra.Command, args []string) {
-	fmt.Println("🐕 Watchdog daemon started")
+	fmt.Println("🐕 Upp daemon started")
 	fmt.Println("Press Ctrl+C to stop")
 
 	sig := make(chan os.Signal, 1)
@@ -42,7 +42,7 @@ func runDaemon(cmd *cobra.Command, args []string) {
 	for {
 		select {
 		case <-sig:
-			fmt.Println("\n🐕 Watchdog daemon stopped")
+			fmt.Println("\n🐕 Upp daemon stopped")
 			return
 		case <-ticker.C:
 			targets, err := db.ListTargets()

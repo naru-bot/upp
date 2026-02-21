@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -14,15 +14,15 @@ func init() {
 		Long: `Add a URL for uptime monitoring and change detection.
 
 Examples:
-  watchdog add https://example.com
-  watchdog add https://example.com --name "My Site" --interval 60
-  watchdog add https://example.com --selector "div.price" --name "Price Watch"
-  watchdog add https://api.example.com/health --expect "ok" --name "API Health"
-  watchdog add 192.168.1.1:3306 --type tcp --name "MySQL"
-  watchdog add example.com --type ping
-  watchdog add example.com --type dns
-  watchdog add https://example.com --retries 3 --timeout 10
-  watchdog add https://example.com --type visual --threshold 7.5`,
+  upp add https://example.com
+  upp add https://example.com --name "My Site" --interval 60
+  upp add https://example.com --selector "div.price" --name "Price Watch"
+  upp add https://api.example.com/health --expect "ok" --name "API Health"
+  upp add 192.168.1.1:3306 --type tcp --name "MySQL"
+  upp add example.com --type ping
+  upp add example.com --type dns
+  upp add https://example.com --retries 3 --timeout 10
+  upp add https://example.com --type visual --threshold 7.5`,
 		Args: requireArgs(1),
 		Run:  runAdd,
 	}

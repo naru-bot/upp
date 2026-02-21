@@ -1,4 +1,4 @@
-module github.com/naru-bot/watchdog
+module github.com/naru-bot/upp
 
 go 1.24.2
 

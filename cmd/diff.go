@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/naru-bot/watchdog/internal/db"
-	"github.com/naru-bot/watchdog/internal/diff"
+	"github.com/naru-bot/upp/internal/db"
+	"github.com/naru-bot/upp/internal/diff"
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +17,9 @@ func init() {
 Compares the two most recent snapshots and displays a unified diff.
 
 Examples:
-  watchdog diff "My Site"
-  watchdog diff https://example.com
-  watchdog diff 1`,
+  upp diff "My Site"
+  upp diff https://example.com
+  upp diff 1`,
 		Args: requireArgs(1),
 		Run:  runDiff,
 	})
@@ -57,7 +57,7 @@ func runDiff(cmd *cobra.Command, args []string) {
 				Summary:    "Not enough snapshots to compare (need at least 2 checks)",
 			})
 		} else {
-			fmt.Println("Not enough snapshots to compare. Run 'watchdog check' at least twice.")
+			fmt.Println("Not enough snapshots to compare. Run 'upp check' at least twice.")
 		}
 		return
 	}

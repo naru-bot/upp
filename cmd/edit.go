@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -16,12 +16,12 @@ func init() {
 Only specified flags are updated; unset flags are left unchanged.
 
 Examples:
-  watchdog edit "My Site" --name "New Name"
-  watchdog edit 1 --url https://new-url.com
-  watchdog edit "My Site" --interval 60 --timeout 10
-  watchdog edit 1 --selector "div.content" --expect "Welcome"
-  watchdog edit "My Site" --retries 3 --type tcp
-  watchdog edit 1 --headers '{"Authorization":"Bearer xxx"}'`,
+  upp edit "My Site" --name "New Name"
+  upp edit 1 --url https://new-url.com
+  upp edit "My Site" --interval 60 --timeout 10
+  upp edit 1 --selector "div.content" --expect "Welcome"
+  upp edit "My Site" --retries 3 --type tcp
+  upp edit 1 --headers '{"Authorization":"Bearer xxx"}'`,
 		Args: requireArgs(1),
 		Run:  runEdit,
 	}
@@ -100,7 +100,7 @@ func runEdit(cmd *cobra.Command, args []string) {
 	}
 
 	if !changed {
-		exitError("nothing to update — specify at least one flag (see watchdog edit --help)")
+		exitError("nothing to update — specify at least one flag (see upp edit --help)")
 	}
 
 	if err := db.UpdateTarget(target); err != nil {

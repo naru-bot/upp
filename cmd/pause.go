@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 

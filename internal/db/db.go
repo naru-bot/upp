@@ -58,18 +58,36 @@ type NotifyConfig struct {
 var db *sql.DB
 
 func GetDBPath() string {
-	// Use XDG_DATA_HOME if set, otherwise fall back to ~/.watchdog
+	// Use XDG_DATA_HOME if set, otherwise fall back to ~/.upp
 	// This ensures consistency between CLI and daemon/systemd contexts
 	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-		dir := filepath.Join(xdg, "watchdog")
-		os.MkdirAll(dir, 0755)
-		return filepath.Join(dir, "watchdog.db")
+		newDir := filepath.Join(xdg, "upp")
+		oldDir := filepath.Join(xdg, "watchdog")
+		
+		// Migrate from old directory if needed
+		if _, err := os.Stat(newDir); os.IsNotExist(err) {
+			if _, err := os.Stat(oldDir); err == nil {
+				os.Rename(oldDir, newDir)
+			}
+		}
+		
+		os.MkdirAll(newDir, 0755)
+		return filepath.Join(newDir, "upp.db")
 	}
 
 	home := getHomeDir()
-	dir := filepath.Join(home, ".watchdog")
-	os.MkdirAll(dir, 0755)
-	return filepath.Join(dir, "watchdog.db")
+	newDir := filepath.Join(home, ".upp")
+	oldDir := filepath.Join(home, ".watchdog")
+	
+	// Migrate from old directory if needed
+	if _, err := os.Stat(newDir); os.IsNotExist(err) {
+		if _, err := os.Stat(oldDir); err == nil {
+			os.Rename(oldDir, newDir)
+		}
+	}
+	
+	os.MkdirAll(newDir, 0755)
+	return filepath.Join(newDir, "upp.db")
 }
 
 // getHomeDir returns the current user's home directory reliably,

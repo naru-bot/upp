@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ func init() {
 			}
 
 			if len(targets) == 0 {
-				fmt.Println("No targets configured. Use 'watchdog add <url>' to start monitoring.")
+				fmt.Println("No targets configured. Use 'upp add <url>' to start monitoring.")
 				return
 			}
 

@@ -32,7 +32,7 @@ Output GIFs are written to `assets/` (e.g. `assets/demo.gif`).
 
 ## Notes
 
-- **Watchdog must be installed** and available in `$PATH` before recording
+- **Upp must be installed** and available in `$PATH` before recording
 - Tapes add example targets, run checks, and show output — they're self-contained demos
 - Theme: Catppuccin Mocha (dark, high contrast)
 - Each tape runs ~10-15 seconds

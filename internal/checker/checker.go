@@ -21,7 +21,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/likexian/whois"
 	whoisparser "github.com/likexian/whois-parser"
-	"github.com/naru-bot/watchdog/internal/db"
+	"github.com/naru-bot/upp/internal/db"
 )
 
 // Patterns for dynamic content that should be ignored when computing content hashes.
@@ -142,7 +142,7 @@ func checkHTTP(target *db.Target) *Result {
 		result.ResponseTime = time.Since(start)
 		return result
 	}
-	req.Header.Set("User-Agent", "watchdog/1.0")
+	req.Header.Set("User-Agent", "upp/1.0")
 
 	resp, err := client.Do(req)
 	result.ResponseTime = time.Since(start)
@@ -361,7 +361,7 @@ func snapWritableDir() string {
 			home = "/root"
 		}
 	}
-	snapDir := filepath.Join(home, "snap", "chromium", "common", "watchdog-tmp")
+	snapDir := filepath.Join(home, "snap", "chromium", "common", "upp-tmp")
 	os.MkdirAll(snapDir, 0755)
 	return snapDir
 }
@@ -370,13 +370,13 @@ func snapWritableDir() string {
 func takeScreenshot(url, outputPath string, timeout time.Duration) error {
 	binary, args := findHeadlessBrowser()
 	if binary == "" {
-		return fmt.Errorf("no headless browser found (run 'watchdog doctor' for install instructions)")
+		return fmt.Errorf("no headless browser found (run 'upp doctor' for install instructions)")
 	}
 
 	// Use a snap-writable temp path for the screenshot, then move it.
 	// Snap-confined Chromium cannot write to arbitrary paths.
 	tmpDir := snapWritableDir()
-	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("watchdog_shot_%d.png", time.Now().UnixNano()))
+	tmpFile := filepath.Join(tmpDir, fmt.Sprintf("upp_shot_%d.png", time.Now().UnixNano()))
 
 	// Build command arguments
 	cmdArgs := append(args,
