@@ -456,6 +456,8 @@ make cross
 | `ping <url>` | Quick one-off check (no DB save) |
 | `import <file>` | Bulk import targets from YAML |
 | `diff <target>` | Show content changes between snapshots |
+| `data <target>` | Show latest stored snapshot content |
+| `extract <url>` | Fetch a URL and show extracted content |
 | `history <target>` | Show check history |
 | `pause <target>` | Pause monitoring |
 | `unpause <target>` | Resume monitoring |

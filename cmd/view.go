@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(&cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "view <name|url|id>",
 		Short: "Show full configuration for a target",
 		Long: `Show the full configuration and latest check for a target.
@@ -20,12 +20,15 @@ Examples:
   upp view 1`,
 		Args: requireArgs(1),
 		Run:  runView,
-	})
+	}
+	cmd.Flags().Bool("data", false, "Include latest snapshot content in output")
+	rootCmd.AddCommand(cmd)
 }
 
 type viewOutput struct {
 	Target    db.Target       `json:"target"`
 	LastCheck *db.CheckResult `json:"last_check,omitempty"`
+	Snapshot  *db.Snapshot    `json:"snapshot,omitempty"`
 }
 
 func runView(cmd *cobra.Command, args []string) {
@@ -39,8 +42,16 @@ func runView(cmd *cobra.Command, args []string) {
 		lastCheck = &checks[0]
 	}
 
+	includeData, _ := cmd.Flags().GetBool("data")
+	var snapshot *db.Snapshot
+	if includeData {
+		if snaps, err := db.GetLatestSnapshots(t.ID, 1); err == nil && len(snaps) > 0 {
+			snapshot = &snaps[0]
+		}
+	}
+
 	if jsonOutput {
-		printJSON(viewOutput{Target: *t, LastCheck: lastCheck})
+		printJSON(viewOutput{Target: *t, LastCheck: lastCheck, Snapshot: snapshot})
 		return
 	}
 
@@ -68,6 +79,9 @@ func runView(cmd *cobra.Command, args []string) {
 
 	if lastCheck == nil {
 		fmt.Println("Last check: none (run 'upp check')")
+		if includeData && snapshot == nil {
+			fmt.Println("Snapshot: none (run 'upp check')")
+		}
 		return
 	}
 
@@ -81,5 +95,17 @@ func runView(cmd *cobra.Command, args []string) {
 	}
 	if lastCheck.Error != "" {
 		fmt.Printf("Error: %s\n", lastCheck.Error)
+	}
+
+	if includeData {
+		if snapshot == nil {
+			fmt.Println("Snapshot: none (run 'upp check')")
+			return
+		}
+		fmt.Printf("\nSnapshot: %s\n\n", snapshot.CreatedAt.Format(time.RFC3339))
+		fmt.Print(snapshot.Content)
+		if len(snapshot.Content) > 0 && snapshot.Content[len(snapshot.Content)-1] != '\n' {
+			fmt.Print("\n")
+		}
 	}
 }
