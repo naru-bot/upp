@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
-	"text/tabwriter"
 	"time"
 
 	"github.com/naru-bot/upp/internal/db"
@@ -40,7 +40,6 @@ func runWatch(cmd *cobra.Command, args []string) {
 	ticker := time.NewTicker(time.Duration(refresh) * time.Second)
 	defer ticker.Stop()
 
-	// Run immediately, then on tick
 	renderDashboard()
 
 	for {
@@ -54,8 +53,39 @@ func runWatch(cmd *cobra.Command, args []string) {
 	}
 }
 
+// padRight pads a string with spaces to the given visible width.
+// It accounts for ANSI escape codes not counting as visible characters.
+func padRight(s string, width int) string {
+	// Strip ANSI codes to get visible length
+	visible := stripAnsi(s)
+	pad := width - len(visible)
+	if pad <= 0 {
+		return s
+	}
+	return s + strings.Repeat(" ", pad)
+}
+
+// stripAnsi removes ANSI escape sequences from a string
+func stripAnsi(s string) string {
+	var result []byte
+	inEscape := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if s[i] == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		result = append(result, s[i])
+	}
+	return string(result)
+}
+
 func renderDashboard() {
-	// Clear screen
 	if !noColor {
 		fmt.Print("\033[2J\033[H")
 	}
@@ -74,25 +104,41 @@ func renderDashboard() {
 		return
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\t%s\n",
-		colorBold("TARGET"), colorBold("UPTIME"), colorBold("RESP"), colorBold("CHANGES"), colorBold("LAST CHECK"), colorBold("STATUS"))
-	fmt.Fprintf(w, "  ──────\t──────\t────\t───────\t──────────\t──────\n")
+	// Column widths
+	const (
+		wTarget = 26
+		wUptime = 8
+		wResp   = 10
+		wChg    = 9
+		wLast   = 12
+	)
+
+	// Header
+	fmt.Printf("  %s%s%s%s%s%s\n",
+		padRight(colorBold("TARGET"), wTarget),
+		padRight(colorBold("UPTIME"), wUptime),
+		padRight(colorBold("RESP"), wResp),
+		padRight(colorBold("CHANGES"), wChg),
+		padRight(colorBold("LAST CHECK"), wLast),
+		colorBold("STATUS"))
+	fmt.Printf("  %s%s%s%s%s%s\n",
+		padRight(strings.Repeat("─", wTarget-2), wTarget),
+		padRight(strings.Repeat("─", wUptime-2), wUptime),
+		padRight(strings.Repeat("─", wResp-2), wResp),
+		padRight(strings.Repeat("─", wChg-2), wChg),
+		padRight(strings.Repeat("─", wLast-2), wLast),
+		"──────")
 
 	for _, t := range targets {
-		// Read latest result from DB (daemon handles the actual checking)
 		lastResults, _ := db.GetCheckHistory(t.ID, 1)
 
 		status := "—"
-		var respMs int64
 		lastChecked := "never"
 		if len(lastResults) > 0 {
 			status = lastResults[0].Status
-			respMs = lastResults[0].ResponseTime
 			lastChecked = lastResults[0].CheckedAt.Format("15:04:05")
 		}
 
-		// Stats
 		since24h := now.Add(-24 * time.Hour)
 		total, up, avgMs, _ := db.GetUptimeStats(t.ID, since24h)
 		uptimePct := float64(0)
@@ -100,7 +146,6 @@ func renderDashboard() {
 			uptimePct = float64(up) / float64(total) * 100
 		}
 
-		// Count changes
 		results, _ := db.GetCheckHistory(t.ID, 1000)
 		changes := 0
 		for _, r := range results {
@@ -109,7 +154,7 @@ func renderDashboard() {
 			}
 		}
 
-		// Color status
+		// Status string
 		statusStr := status
 		switch status {
 		case "up", "unchanged":
@@ -120,14 +165,14 @@ func renderDashboard() {
 			statusStr = colorRed("✗ " + status)
 			if len(lastResults) > 0 && lastResults[0].Error != "" {
 				shortErr := lastResults[0].Error
-				if len(shortErr) > 30 {
-					shortErr = shortErr[:27] + "..."
+				if len(shortErr) > 25 {
+					shortErr = shortErr[:22] + "..."
 				}
 				statusStr += " " + colorRed("("+shortErr+")")
 			}
 		}
 
-		// Color uptime
+		// Uptime string
 		uptimeStr := fmt.Sprintf("%.1f%%", uptimePct)
 		if uptimePct >= 99 {
 			uptimeStr = colorGreen(uptimeStr)
@@ -137,10 +182,15 @@ func renderDashboard() {
 			uptimeStr = colorRed(uptimeStr)
 		}
 
-		_ = respMs
-		fmt.Fprintf(w, "  %s\t%s\t%.0fms\t%d\t%s\t%s\n",
-			truncate(t.Name, 25), uptimeStr, avgMs, changes, lastChecked, statusStr)
+		respStr := fmt.Sprintf("%.0fms", avgMs)
+
+		fmt.Printf("  %s%s%s%s%s%s\n",
+			padRight(truncate(t.Name, wTarget-2), wTarget),
+			padRight(uptimeStr, wUptime),
+			padRight(respStr, wResp),
+			padRight(fmt.Sprintf("%d", changes), wChg),
+			padRight(lastChecked, wLast),
+			statusStr)
 	}
-	w.Flush()
 	fmt.Printf("\n%s targets monitored\n", colorCyan(fmt.Sprintf("%d", len(targets))))
 }
