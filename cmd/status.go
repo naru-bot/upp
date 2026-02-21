@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattn/go-runewidth"
+
 	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
@@ -354,11 +356,11 @@ func runStatus(cmd *cobra.Command, args []string) {
 		allRows = append(allRows, row)
 	}
 
-	// Compute max visible width per column
+	// Compute max visible width per column (using display width, not byte count)
 	colWidths := make([]int, numCols)
 	for _, row := range allRows {
 		for j, cell := range row {
-			visible := len(ansiRe.ReplaceAllString(cell, ""))
+			visible := runewidth.StringWidth(ansiRe.ReplaceAllString(cell, ""))
 			if visible > colWidths[j] {
 				colWidths[j] = visible
 			}
@@ -367,11 +369,12 @@ func runStatus(cmd *cobra.Command, args []string) {
 
 	// Print header
 	printPaddedRow(os.Stdout, allRows[0], colWidths, ansiRe)
-	// Separator
+	// Separator (─ is 1 display width)
 	sepRow := make([]string, numCols)
 	for i, w := range colWidths {
 		sepRow[i] = strings.Repeat("─", w)
 	}
+	// Separator uses single-width chars so it aligns correctly
 	printPaddedRow(os.Stdout, sepRow, colWidths, ansiRe)
 	// Data
 	for _, row := range allRows[1:] {
@@ -381,7 +384,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 
 func printPaddedRow(w *os.File, row []string, widths []int, ansiRe *regexp.Regexp) {
 	for i, cell := range row {
-		visLen := len(ansiRe.ReplaceAllString(cell, ""))
+		visLen := runewidth.StringWidth(ansiRe.ReplaceAllString(cell, ""))
 		pad := widths[i] - visLen
 		if pad < 0 {
 			pad = 0
