@@ -70,6 +70,14 @@ func GetDBPath() string {
 				os.Rename(oldDir, newDir)
 			}
 		}
+		// Rename old DB file if needed
+		oldDB := filepath.Join(newDir, "watchdog.db")
+		newDB := filepath.Join(newDir, "upp.db")
+		if _, err := os.Stat(newDB); os.IsNotExist(err) {
+			if _, err := os.Stat(oldDB); err == nil {
+				os.Rename(oldDB, newDB)
+			}
+		}
 		
 		os.MkdirAll(newDir, 0755)
 		return filepath.Join(newDir, "upp.db")
@@ -83,6 +91,15 @@ func GetDBPath() string {
 	if _, err := os.Stat(newDir); os.IsNotExist(err) {
 		if _, err := os.Stat(oldDir); err == nil {
 			os.Rename(oldDir, newDir)
+		}
+	}
+	
+	// Rename old DB file if needed
+	oldDB := filepath.Join(newDir, "watchdog.db")
+	newDB := filepath.Join(newDir, "upp.db")
+	if _, err := os.Stat(newDB); os.IsNotExist(err) {
+		if _, err := os.Stat(oldDB); err == nil {
+			os.Rename(oldDB, newDB)
 		}
 	}
 	
