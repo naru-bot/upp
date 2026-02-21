@@ -8,7 +8,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/naru-bot/upp/internal/checker"
 	"github.com/naru-bot/upp/internal/db"
 	"github.com/spf13/cobra"
 )
@@ -81,23 +80,16 @@ func renderDashboard() {
 	fmt.Fprintf(w, "  ──────\t──────\t──────\t────\t───────\t──────────\n")
 
 	for _, t := range targets {
-		// Run check
-		result := checker.Check(&t)
-		cr := &db.CheckResult{
-			TargetID:     t.ID,
-			Status:       result.Status,
-			StatusCode:   result.StatusCode,
-			ResponseTime: result.ResponseTime.Milliseconds(),
-			ContentHash:  result.ContentHash,
-			Error:        result.Error,
-		}
-		db.SaveCheckResult(cr)
+		// Read latest result from DB (daemon handles the actual checking)
+		lastResults, _ := db.GetCheckHistory(t.ID, 1)
 
-		if result.Content != "" && result.ContentHash != "" {
-			snaps, _ := db.GetLatestSnapshots(t.ID, 1)
-			if len(snaps) == 0 || snaps[0].Hash != result.ContentHash {
-				db.SaveSnapshot(t.ID, result.Content, result.ContentHash)
-			}
+		status := "—"
+		var respMs int64
+		lastChecked := "never"
+		if len(lastResults) > 0 {
+			status = lastResults[0].Status
+			respMs = lastResults[0].ResponseTime
+			lastChecked = lastResults[0].CheckedAt.Format("15:04:05")
 		}
 
 		// Stats
@@ -118,14 +110,21 @@ func renderDashboard() {
 		}
 
 		// Color status
-		statusStr := result.Status
-		switch result.Status {
+		statusStr := status
+		switch status {
 		case "up", "unchanged":
-			statusStr = colorGreen("● " + result.Status)
+			statusStr = colorGreen("● " + status)
 		case "changed":
 			statusStr = colorYellow("△ changed")
 		case "down", "error":
-			statusStr = colorRed("✗ " + result.Status)
+			statusStr = colorRed("✗ " + status)
+			if len(lastResults) > 0 && lastResults[0].Error != "" {
+				shortErr := lastResults[0].Error
+				if len(shortErr) > 30 {
+					shortErr = shortErr[:27] + "..."
+				}
+				statusStr += " " + colorRed("("+shortErr+")")
+			}
 		}
 
 		// Color uptime
@@ -138,8 +137,9 @@ func renderDashboard() {
 			uptimeStr = colorRed(uptimeStr)
 		}
 
+		_ = respMs // use avgMs for display consistency
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%.0fms\t%d\t%s\n",
-			truncate(t.Name, 25), statusStr, uptimeStr, avgMs, changes, now.Format("15:04:05"))
+			truncate(t.Name, 25), statusStr, uptimeStr, avgMs, changes, lastChecked)
 	}
 	w.Flush()
 	fmt.Printf("\n%s targets monitored\n", colorCyan(fmt.Sprintf("%d", len(targets))))
