@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +26,32 @@ import (
 	whoisparser "github.com/likexian/whois-parser"
 	"github.com/naru-bot/upp/internal/db"
 )
+
+// isAcceptedStatus checks if a status code is in the accept-status spec.
+// Format: "200,201,300-399,404" — comma-separated codes or ranges.
+func isAcceptedStatus(code int, spec string) bool {
+	if spec == "" {
+		return code >= 200 && code < 400
+	}
+	for _, part := range strings.Split(spec, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if idx := strings.Index(part, "-"); idx > 0 {
+			lo, err1 := strconv.Atoi(strings.TrimSpace(part[:idx]))
+			hi, err2 := strconv.Atoi(strings.TrimSpace(part[idx+1:]))
+			if err1 == nil && err2 == nil && code >= lo && code <= hi {
+				return true
+			}
+		} else {
+			if v, err := strconv.Atoi(part); err == nil && code == v {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // Patterns for dynamic content that should be ignored when computing content hashes.
 // These change on every page load but don't represent meaningful content changes.
@@ -130,14 +157,28 @@ func checkHTTP(target *db.Target) *Result {
 		timeout = 30 * time.Second
 	}
 
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: target.Insecure},
+	}
 	client := &http.Client{
-		Timeout: timeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
-		},
+		Timeout:   timeout,
+		Transport: transport,
+	}
+	if target.NoFollow {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
 	}
 
-	req, err := http.NewRequest("GET", target.URL, nil)
+	method := strings.ToUpper(target.Method)
+	if method == "" {
+		method = "GET"
+	}
+	var bodyReader io.Reader
+	if target.Body != "" {
+		bodyReader = strings.NewReader(target.Body)
+	}
+	req, err := http.NewRequest(method, target.URL, bodyReader)
 	if err != nil {
 		result.Status = "error"
 		result.Error = err.Error()
@@ -145,6 +186,17 @@ func checkHTTP(target *db.Target) *Result {
 		return result
 	}
 	req.Header.Set("User-Agent", "upp/1.0")
+	if target.Body != "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if target.Headers != "" {
+		var customHeaders map[string]string
+		if err := json.Unmarshal([]byte(target.Headers), &customHeaders); err == nil {
+			for k, v := range customHeaders {
+				req.Header.Set(k, v)
+			}
+		}
+	}
 
 	resp, err := client.Do(req)
 	result.ResponseTime = time.Since(start)
@@ -239,7 +291,7 @@ func checkHTTP(target *db.Target) *Result {
 	}
 
 	// Determine status
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+	if isAcceptedStatus(resp.StatusCode, target.AcceptStatus) {
 		// Check keyword match
 		if result.BodyMatch != nil && !*result.BodyMatch {
 			result.Status = "down"

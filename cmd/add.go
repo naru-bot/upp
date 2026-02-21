@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/naru-bot/upp/internal/db"
@@ -28,7 +30,12 @@ Examples:
   upp add https://example.com --trigger-if "not_contains:in stock"
   upp add https://example.com --trigger-if "regex:price.*\$[0-9]+"
   upp add https://api.example.com/data --jq '.items[].name'
-  upp add https://api.example.com/v1/status --jq '.status' --trigger-if "not_contains:healthy"`,
+  upp add https://api.example.com/v1/status --jq '.status' --trigger-if "not_contains:healthy"
+  upp add https://api.example.com/data --method POST --body '{"query":"health"}'
+  upp add https://example.com --auth-bearer "token123"
+  upp add https://example.com --auth-basic "user:pass"
+  upp add https://example.com --no-follow --accept-status "301"
+  upp add https://internal.example.com --insecure`,
 		Args: requireArgs(1),
 		Run:  runAdd,
 	}
@@ -44,6 +51,13 @@ Examples:
 	cmd.Flags().Float64("threshold", 5.0, "Visual diff threshold percentage (visual type only)")
 	cmd.Flags().String("trigger-if", "", "Conditional trigger rule (e.g. 'contains:text', 'regex:pattern')")
 	cmd.Flags().String("jq", "", "jq filter for JSON API responses")
+	cmd.Flags().String("method", "", "HTTP method (GET, POST, PUT, PATCH, DELETE, HEAD)")
+	cmd.Flags().String("body", "", "Request body (for POST/PUT/PATCH)")
+	cmd.Flags().String("auth-basic", "", "Basic auth credentials (user:pass)")
+	cmd.Flags().String("auth-bearer", "", "Bearer token for Authorization header")
+	cmd.Flags().Bool("no-follow", false, "Don't follow redirects")
+	cmd.Flags().String("accept-status", "", "Accepted HTTP status codes (e.g. '200-299,301,404')")
+	cmd.Flags().Bool("insecure", false, "Skip TLS certificate verification")
 
 	rootCmd.AddCommand(cmd)
 }
@@ -62,6 +76,14 @@ func runAdd(cmd *cobra.Command, args []string) {
 	triggerIF, _ := cmd.Flags().GetString("trigger-if")
 	jqFilter, _ := cmd.Flags().GetString("jq")
 
+	method, _ := cmd.Flags().GetString("method")
+	body, _ := cmd.Flags().GetString("body")
+	authBasic, _ := cmd.Flags().GetString("auth-basic")
+	authBearer, _ := cmd.Flags().GetString("auth-bearer")
+	noFollow, _ := cmd.Flags().GetBool("no-follow")
+	acceptStatus, _ := cmd.Flags().GetString("accept-status")
+	insecure, _ := cmd.Flags().GetBool("insecure")
+
 	// Parse trigger rule shorthand
 	var triggerRule string
 	if triggerIF != "" {
@@ -72,7 +94,20 @@ func runAdd(cmd *cobra.Command, args []string) {
 		triggerRule = rule
 	}
 
-	target, err := db.AddTarget(name, url, typ, interval, selector, headers, expect, timeout, retries, threshold, triggerRule, jqFilter)
+	// Apply auth shortcuts to headers
+	headers = applyAuth(headers, authBasic, authBearer)
+
+	opts := db.AddTargetOpts{
+		TriggerRule:  triggerRule,
+		JQFilter:     jqFilter,
+		Method:       method,
+		Body:         body,
+		NoFollow:     noFollow,
+		AcceptStatus: acceptStatus,
+		Insecure:     insecure,
+	}
+
+	target, err := db.AddTarget(name, url, typ, interval, selector, headers, expect, timeout, retries, threshold, opts)
 	if err != nil {
 		exitError(err.Error())
 	}
@@ -94,9 +129,52 @@ func runAdd(cmd *cobra.Command, args []string) {
 		if target.JQFilter != "" {
 			fmt.Printf(" | jq: %s", target.JQFilter)
 		}
+		if target.Method != "" {
+			fmt.Printf(" | Method: %s", target.Method)
+		}
+		if target.Body != "" {
+			fmt.Printf(" | Body: %s", truncateStr(target.Body, 40))
+		}
+		if target.NoFollow {
+			fmt.Printf(" | No-Follow")
+		}
+		if target.AcceptStatus != "" {
+			fmt.Printf(" | Accept: %s", target.AcceptStatus)
+		}
+		if target.Insecure {
+			fmt.Printf(" | Insecure")
+		}
 		if target.TriggerRule != "" {
 			fmt.Printf(" | Trigger: %s", trigger.Describe(target.TriggerRule))
 		}
 		fmt.Println()
 	}
 }
+
+// applyAuth merges auth shortcuts into the headers JSON string.
+func applyAuth(headers, authBasic, authBearer string) string {
+	if authBasic == "" && authBearer == "" {
+		return headers
+	}
+	h := make(map[string]string)
+	if headers != "" {
+		json.Unmarshal([]byte(headers), &h)
+	}
+	if authBasic != "" {
+		encoded := base64.StdEncoding.EncodeToString([]byte(authBasic))
+		h["Authorization"] = "Basic " + encoded
+	}
+	if authBearer != "" {
+		h["Authorization"] = "Bearer " + authBearer
+	}
+	b, _ := json.Marshal(h)
+	return string(b)
+}
+
+func truncateStr(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-3] + "..."
+}
+

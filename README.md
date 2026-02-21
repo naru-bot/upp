@@ -25,6 +25,7 @@
   - [Change Detection + Diff](#-change-detection--diff)
   - [Conditional Triggers](#-conditional-triggers)
   - [JSON API Monitoring (jq)](#-json-api-monitoring-jq)
+  - [Advanced HTTP Options](#-advanced-http-options)
   - [Quick Ping Diagnostics](#-quick-ping-diagnostics)
   - [JSON Output for AI Agents](#-json-output-for-ai-agents)
   - [Notifications](#-notifications)
@@ -163,6 +164,40 @@ upp add https://api.example.com/data --jq '.items[] | {name, status}' --name "It
 
 # Combine with triggers — alert only when price drops below threshold
 upp add https://api.store.com/product/123 --jq '.price' --trigger-if "regex:^[0-9]\."
+```
+
+---
+
+### 🔐 Advanced HTTP Options
+
+Full control over HTTP requests — method, body, auth, redirects, and status codes.
+
+```bash
+# POST request with JSON body (API health checks, GraphQL, webhooks)
+upp add https://api.example.com/health --method POST --body '{"check":"deep"}'
+
+# Bearer token authentication
+upp add https://api.example.com/protected --auth-bearer "your-token-here"
+
+# Basic auth
+upp add https://staging.example.com --auth-basic "user:password"
+
+# Monitor that a redirect exists (don't follow it)
+upp add https://old.example.com --no-follow --accept-status "301"
+
+# Accept specific status codes as "up" (e.g. 404 page monitoring)
+upp add https://example.com/deleted-page --accept-status "200,404"
+
+# Skip TLS verification (self-signed certs on internal services)
+upp add https://internal.example.com:8443 --insecure
+
+# Combine everything: POST + auth + jq + trigger
+upp add https://api.example.com/graphql \
+  --method POST \
+  --body '{"query":"{ status { healthy } }"}' \
+  --auth-bearer "token" \
+  --jq '.data.status.healthy' \
+  --trigger-if "not_contains:true"
 ```
 
 ---
@@ -316,6 +351,12 @@ When using the TUI add/edit screen, these fields control how your targets are mo
 | Threshold (%) | Visual diff percentage to trigger change (default: 5.0) | visual |
 | Trigger Rule | Conditional notification rule (e.g. `contains:text`, `regex:pattern`) | All types |
 | jq Filter | jq expression to filter JSON API responses before change detection | http |
+| Method | HTTP method: GET, POST, PUT, PATCH, DELETE, HEAD (default: GET) | http |
+| Body | Request body for POST/PUT/PATCH requests | http |
+| Auth | `--auth-basic user:pass` or `--auth-bearer token` (stored in headers) | http |
+| No-Follow | Don't follow HTTP redirects | http |
+| Accept Status | Accepted status codes, e.g. `200-299,301,404` (default: 200-399) | http |
+| Insecure | Skip TLS certificate verification | http |
 
 ---
 

@@ -24,10 +24,15 @@ type Target struct {
 	Timeout   int       `json:"timeout,omitempty"`  // Per-target timeout in seconds
 	Retries   int       `json:"retries,omitempty"`  // Retry count before marking down
 	Threshold   float64   `json:"threshold,omitempty"`    // Visual diff threshold percentage (default 5.0)
-	TriggerRule string    `json:"trigger_rule,omitempty"` // JSON trigger condition for notifications
-	JQFilter    string    `json:"jq_filter,omitempty"`    // jq expression to filter JSON responses
-	CreatedAt   time.Time `json:"created_at"`
-	Paused      bool      `json:"paused"`
+	TriggerRule  string    `json:"trigger_rule,omitempty"`  // JSON trigger condition for notifications
+	JQFilter     string    `json:"jq_filter,omitempty"`     // jq expression to filter JSON responses
+	Method       string    `json:"method,omitempty"`        // HTTP method (GET, POST, etc.)
+	Body         string    `json:"body,omitempty"`          // Request body for POST/PUT/PATCH
+	NoFollow     bool      `json:"no_follow,omitempty"`     // Don't follow redirects
+	AcceptStatus string    `json:"accept_status,omitempty"` // Accepted status codes (e.g. "200-299,301")
+	Insecure     bool      `json:"insecure,omitempty"`      // Skip TLS verification
+	CreatedAt    time.Time `json:"created_at"`
+	Paused       bool      `json:"paused"`
 }
 
 type CheckResult struct {
@@ -156,6 +161,11 @@ func InitWithPath(path string) error {
 		threshold REAL DEFAULT 5.0,
 		trigger_rule TEXT DEFAULT '',
 		jq_filter TEXT DEFAULT '',
+		method TEXT DEFAULT '',
+		body TEXT DEFAULT '',
+		no_follow INTEGER DEFAULT 0,
+		accept_status TEXT DEFAULT '',
+		insecure INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		paused INTEGER DEFAULT 0,
 		UNIQUE(url, type, selector)
@@ -221,6 +231,36 @@ func InitWithPath(path string) error {
 		return err
 	}
 
+	// Migration: Add method column
+	_, err = db.Exec("ALTER TABLE targets ADD COLUMN method TEXT DEFAULT ''")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	// Migration: Add body column
+	_, err = db.Exec("ALTER TABLE targets ADD COLUMN body TEXT DEFAULT ''")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	// Migration: Add no_follow column
+	_, err = db.Exec("ALTER TABLE targets ADD COLUMN no_follow INTEGER DEFAULT 0")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	// Migration: Add accept_status column
+	_, err = db.Exec("ALTER TABLE targets ADD COLUMN accept_status TEXT DEFAULT ''")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	// Migration: Add insecure column
+	_, err = db.Exec("ALTER TABLE targets ADD COLUMN insecure INTEGER DEFAULT 0")
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
 	// Migration: Update unique constraint from (url, selector) to (url, type, selector)
 	// SQLite can't alter constraints, so we recreate the table
 	var tableSql string
@@ -242,6 +282,11 @@ func InitWithPath(path string) error {
 			threshold REAL DEFAULT 5.0,
 			trigger_rule TEXT DEFAULT '',
 			jq_filter TEXT DEFAULT '',
+			method TEXT DEFAULT '',
+			body TEXT DEFAULT '',
+			no_follow INTEGER DEFAULT 0,
+			accept_status TEXT DEFAULT '',
+			insecure INTEGER DEFAULT 0,
 			UNIQUE(url, type, selector)
 		)`)
 		db.Exec(`INSERT INTO targets_new SELECT * FROM targets`)
@@ -256,7 +301,17 @@ func DB() *sql.DB {
 	return db
 }
 
-func AddTarget(name, url, typ string, interval int, selector, headers, expect string, timeout, retries int, threshold float64, triggerRule, jqFilter string) (*Target, error) {
+type AddTargetOpts struct {
+	TriggerRule  string
+	JQFilter     string
+	Method       string
+	Body         string
+	NoFollow     bool
+	AcceptStatus string
+	Insecure     bool
+}
+
+func AddTarget(name, url, typ string, interval int, selector, headers, expect string, timeout, retries int, threshold float64, opts AddTargetOpts) (*Target, error) {
 	if name == "" {
 		name = url
 	}
@@ -269,15 +324,23 @@ func AddTarget(name, url, typ string, interval int, selector, headers, expect st
 	if threshold <= 0 {
 		threshold = 5.0
 	}
+	noFollow := 0
+	if opts.NoFollow {
+		noFollow = 1
+	}
+	insecure := 0
+	if opts.Insecure {
+		insecure = 1
+	}
 	res, err := db.Exec(
-		"INSERT INTO targets (name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		name, url, typ, interval, selector, headers, expect, timeout, retries, threshold, triggerRule, jqFilter,
+		"INSERT INTO targets (name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter, method, body, no_follow, accept_status, insecure) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		name, url, typ, interval, selector, headers, expect, timeout, retries, threshold, opts.TriggerRule, opts.JQFilter, opts.Method, opts.Body, noFollow, opts.AcceptStatus, insecure,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add target (may already exist): %w", err)
 	}
 	id, _ := res.LastInsertId()
-	return &Target{ID: id, Name: name, URL: url, Type: typ, Interval: interval, Selector: selector, Headers: headers, Expect: expect, Timeout: timeout, Retries: retries, Threshold: threshold, TriggerRule: triggerRule, JQFilter: jqFilter, CreatedAt: time.Now()}, nil
+	return &Target{ID: id, Name: name, URL: url, Type: typ, Interval: interval, Selector: selector, Headers: headers, Expect: expect, Timeout: timeout, Retries: retries, Threshold: threshold, TriggerRule: opts.TriggerRule, JQFilter: opts.JQFilter, Method: opts.Method, Body: opts.Body, NoFollow: opts.NoFollow, AcceptStatus: opts.AcceptStatus, Insecure: opts.Insecure, CreatedAt: time.Now()}, nil
 }
 
 func RemoveTarget(identifier string) error {
@@ -294,7 +357,7 @@ func RemoveTarget(identifier string) error {
 }
 
 func ListTargets() ([]Target, error) {
-	rows, err := db.Query("SELECT id, name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter, created_at, paused FROM targets ORDER BY id")
+	rows, err := db.Query("SELECT id, name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter, method, body, no_follow, accept_status, insecure, created_at, paused FROM targets ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -303,12 +366,14 @@ func ListTargets() ([]Target, error) {
 	var targets []Target
 	for rows.Next() {
 		var t Target
-		var paused int
-		err := rows.Scan(&t.ID, &t.Name, &t.URL, &t.Type, &t.Interval, &t.Selector, &t.Headers, &t.Expect, &t.Timeout, &t.Retries, &t.Threshold, &t.TriggerRule, &t.JQFilter, &t.CreatedAt, &paused)
+		var paused, noFollow, insecure int
+		err := rows.Scan(&t.ID, &t.Name, &t.URL, &t.Type, &t.Interval, &t.Selector, &t.Headers, &t.Expect, &t.Timeout, &t.Retries, &t.Threshold, &t.TriggerRule, &t.JQFilter, &t.Method, &t.Body, &noFollow, &t.AcceptStatus, &insecure, &t.CreatedAt, &paused)
 		if err != nil {
 			return nil, err
 		}
 		t.Paused = paused == 1
+		t.NoFollow = noFollow == 1
+		t.Insecure = insecure == 1
 		targets = append(targets, t)
 	}
 	return targets, nil
@@ -316,22 +381,32 @@ func ListTargets() ([]Target, error) {
 
 func GetTarget(identifier string) (*Target, error) {
 	var t Target
-	var paused int
+	var paused, noFollow, insecure int
 	err := db.QueryRow(
-		"SELECT id, name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter, created_at, paused FROM targets WHERE name = ? OR url = ? OR id = ?",
+		"SELECT id, name, url, type, interval_seconds, selector, headers, expect, timeout, retries, threshold, trigger_rule, jq_filter, method, body, no_follow, accept_status, insecure, created_at, paused FROM targets WHERE name = ? OR url = ? OR id = ?",
 		identifier, identifier, identifier,
-	).Scan(&t.ID, &t.Name, &t.URL, &t.Type, &t.Interval, &t.Selector, &t.Headers, &t.Expect, &t.Timeout, &t.Retries, &t.Threshold, &t.TriggerRule, &t.JQFilter, &t.CreatedAt, &paused)
+	).Scan(&t.ID, &t.Name, &t.URL, &t.Type, &t.Interval, &t.Selector, &t.Headers, &t.Expect, &t.Timeout, &t.Retries, &t.Threshold, &t.TriggerRule, &t.JQFilter, &t.Method, &t.Body, &noFollow, &t.AcceptStatus, &insecure, &t.CreatedAt, &paused)
 	if err != nil {
 		return nil, fmt.Errorf("target not found: %s", identifier)
 	}
 	t.Paused = paused == 1
+	t.NoFollow = noFollow == 1
+	t.Insecure = insecure == 1
 	return &t, nil
 }
 
 func UpdateTarget(t *Target) error {
+	noFollow := 0
+	if t.NoFollow {
+		noFollow = 1
+	}
+	insecure := 0
+	if t.Insecure {
+		insecure = 1
+	}
 	res, err := db.Exec(
-		`UPDATE targets SET name=?, url=?, type=?, interval_seconds=?, selector=?, headers=?, expect=?, timeout=?, retries=?, threshold=?, trigger_rule=?, jq_filter=? WHERE id=?`,
-		t.Name, t.URL, t.Type, t.Interval, t.Selector, t.Headers, t.Expect, t.Timeout, t.Retries, t.Threshold, t.TriggerRule, t.JQFilter, t.ID,
+		`UPDATE targets SET name=?, url=?, type=?, interval_seconds=?, selector=?, headers=?, expect=?, timeout=?, retries=?, threshold=?, trigger_rule=?, jq_filter=?, method=?, body=?, no_follow=?, accept_status=?, insecure=? WHERE id=?`,
+		t.Name, t.URL, t.Type, t.Interval, t.Selector, t.Headers, t.Expect, t.Timeout, t.Retries, t.Threshold, t.TriggerRule, t.JQFilter, t.Method, t.Body, noFollow, t.AcceptStatus, insecure, t.ID,
 	)
 	if err != nil {
 		return err

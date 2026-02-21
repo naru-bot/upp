@@ -52,8 +52,13 @@ type importTarget struct {
 	Timeout   int     `yaml:"timeout"`
 	Retries   int     `yaml:"retries"`
 	Threshold   float64 `yaml:"threshold"`
-	TriggerRule string  `yaml:"trigger_rule"`
-	JQFilter    string  `yaml:"jq_filter"`
+	TriggerRule   string  `yaml:"trigger_rule"`
+	JQFilter      string  `yaml:"jq_filter"`
+	Method        string  `yaml:"method"`
+	Body          string  `yaml:"body"`
+	NoFollow      bool    `yaml:"no_follow"`
+	AcceptStatus  string  `yaml:"accept_status"`
+	Insecure      bool    `yaml:"insecure"`
 }
 
 func runImport(cmd *cobra.Command, args []string) {
@@ -101,7 +106,9 @@ func runImport(cmd *cobra.Command, args []string) {
 			t.Threshold = 5.0
 		}
 
-		_, err := db.AddTarget(t.Name, t.URL, t.Type, t.Interval, t.Selector, t.Headers, t.Expect, t.Timeout, t.Retries, t.Threshold, t.TriggerRule, t.JQFilter)
+		_, err := db.AddTarget(t.Name, t.URL, t.Type, t.Interval, t.Selector, t.Headers, t.Expect, t.Timeout, t.Retries, t.Threshold, db.AddTargetOpts{
+				TriggerRule: t.TriggerRule, JQFilter: t.JQFilter, Method: t.Method, Body: t.Body, NoFollow: t.NoFollow, AcceptStatus: t.AcceptStatus, Insecure: t.Insecure,
+			})
 		r := result{Name: t.Name, URL: t.URL}
 		if err != nil {
 			r.Status = "error"

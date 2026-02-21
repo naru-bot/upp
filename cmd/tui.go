@@ -683,7 +683,7 @@ func (m *tuiModel) saveAdd() error {
 	}
 	jqFilter := m.editInputs[editJQ].Value()
 
-	_, err := db.AddTarget(name, url, typ, interval, selector, "", expect, timeout, retries, threshold, triggerRule, jqFilter)
+	_, err := db.AddTarget(name, url, typ, interval, selector, "", expect, timeout, retries, threshold, db.AddTargetOpts{TriggerRule: triggerRule, JQFilter: jqFilter})
 	return err
 }
 
